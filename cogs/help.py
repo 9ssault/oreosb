@@ -35,6 +35,8 @@ util        userinfo | avatar | servericon | firstmessage | id | pingweb
 group       gcreate | gleave
 scheduler   schedule | loopmsg
 anti        antiban
+rpc         rpc on|off|name|url|refresh
+quest       quests | qstart | qstop | qclaim
 remind      remind <sec> <msg> | timer <sec>
 calc        calc <expr>
 crypto      btc | eth
