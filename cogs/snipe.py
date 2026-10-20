@@ -1,4 +1,3 @@
-# cogs/snipe.py — deleted + edited message snipe
 import discord
 from discord.ext import commands
 from collections import defaultdict

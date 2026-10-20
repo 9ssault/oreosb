@@ -1,4 +1,3 @@
-# cogs/auth.py — login system + token management
 import asyncio
 import aiohttp
 import json
@@ -31,7 +30,6 @@ class Auth(commands.Cog):
             ok = await self._validate(token)
             if ok:
                 await ctx.send(f"token valid → `{ok['username']}`", delete_after=8)
-                # optionally switch (requires restart for full switch)
                 with open("config.json") as f:
                     cfg = json.load(f)
                 cfg["token"] = token

@@ -1,4 +1,3 @@
-# cogs/cloner.py — server structure cloner
 import asyncio
 import json
 import discord

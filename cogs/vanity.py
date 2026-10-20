@@ -34,10 +34,7 @@ class VanitySniper(commands.Cog):
                     async with aiohttp.ClientSession() as s:
                         async with s.get(f"{API}/invites/{code}", headers=headers) as r:
                             if r.status == 404:
-                                # try claim on a guild the bot owns / has admin
                                 print(f"[VANITY] {code} free — attempt claim")
-                                # claim requires guild_id with MANAGE_GUILD
-                                # left as hook for user to set target guild
                 except Exception:
                     pass
             await asyncio.sleep(2.5)

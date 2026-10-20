@@ -15,7 +15,6 @@ class Advanced(commands.Cog):
     async def snipe(self, ctx):
         """last deleted message in channel (simple cache)"""
         await ctx.message.delete()
-        # lightweight: just acknowledge — full snipe needs on_message_delete listener
         await ctx.send("snipe cache not persistent yet — enable on_message_delete for full", delete_after=4)
 
     @commands.command(name="copycat")
