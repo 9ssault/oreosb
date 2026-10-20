@@ -6,6 +6,7 @@ OreoSB
 ──────
 core        ping | uptime | reload
 auth        login | tokens | addtoken | rmtoken | gentoken
+            setlogin | refresh | checktokenlive
 manager     tlist | setallpfp | setallbio | setallstatus | setallgame
             joinaltokens | leavealltokens
 friends     friends | addfriend | removefriend | block | unblock

@@ -22,6 +22,7 @@ class OreoSB(commands.Bot):
             command_prefix=PREFIX,
             self_bot=True,
             chunk_guilds_at_startup=False,
+            # reconnect handled by discord.py-self gateway
             help_command=None,
         )
         self.cfg = cfg
