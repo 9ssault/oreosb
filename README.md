@@ -132,3 +132,18 @@ tokens.txt
 - No stubs — cogs are meant to run
 - Keep secrets out of git (`.env`, tokens)
 - Discord will limit/disable accounts that automate heavily
+
+
+## Password rotate / reset
+
+Discord invalidating a **token** is fixed by email+password login (auto-relogin).
+
+If the **password** itself is wrong or you want to rotate it:
+
+| Command | What it does |
+|---------|----------------|
+| `.changepass OLD NEW` | Change password while logged in; saves NEW to `.env` |
+| `.autoreset` | Rotate to a random password using current `PASSWORD` in `.env` |
+| `.forgotpass [email]` | Triggers Discord's forgot-password **email** (you must open the link; bot cannot read your inbox) |
+
+Full unattended reset of a forgotten password is impossible without email/SMS access.
