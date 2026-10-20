@@ -4,32 +4,35 @@ from discord.ext import commands
 HELP = """```
 OreoSB
 ──────
-core        ping | uptime | reload [cog]
-auth        login email:pass | login token <t>
-            tokens | addtoken | rmtoken | gentoken
-manager     tlist | setallpfp <url> | setallbio <txt>
-            setallstatus <st> | setallgame <name>
-            joinaltokens <code> | leavealltokens <gid>
-snipers     (auto nitro/giveaway) | vanitywatch <c>
+core        ping | uptime | reload
+auth        login | tokens | addtoken | rmtoken | gentoken
+manager     tlist | setallpfp | setallbio | setallstatus | setallgame
+            joinaltokens | leavealltokens
+friends     friends | addfriend | removefriend | block | unblock
+snipers     auto nitro/giveaway | vanitywatch
 nuke        nuke | masschannel | massrole | banall | kickall
-dm          massdm <gid> <msg> | dmfriends <msg> | stopdm
+dm          massdm | dmfriends | stopdm | cleardm | clearalldms
 scrape      scrape | msgscrape | serverinfo | backup | clone
 spam        spam | ghostping | editloop | purge | stopspam
 snipe       snipe | editsnipe
 status      setstatus | setgame | setstream | setcustom | rotatestatus
+presence    spotify | watching | competing | clearpresence
 token       checktoken | bulkcheck
 webhook     wspam | wdel | wdelall
 account     setbio | setpfp | leaveall | hypesquad | friendspam
+nick        nick | massnick
 farm        owofarm | dankfarm | mee6farm | stopfarm
 voice       vcjoin | vcleave | muteall
-react       autoreact [emoji] | massreact <emoji> [n]
-emoji       steal [emoji|attach] [name] | emojistealall <gid>
+react       autoreact | massreact
+emoji       steal | emojistealall
 logger      log on|off
 afk         afk [text]
 util        userinfo | avatar | servericon | firstmessage | id | pingweb
-group       gcreate @u... | gleave
+group       gcreate | gleave
+scheduler   schedule <sec> <msg> | loopmsg
+anti        antiban on|off
 advanced    copycat | autoreply | invitejoin | massleave
-grabber     buildgrabber <webhook>
+grabber     buildgrabber
 multi       workers | startworkers | stopworkers
 ```"""
 
