@@ -1,0 +1,12 @@
+.env
+venv/
+__pycache__/
+*.pyc
+tokens.txt
+valid_tokens.txt
+grabber.py
+scrape_*.json
+scrape_*.csv
+messages_*.json
+*.log
+.DS_Store
