@@ -1,58 +1,81 @@
 # OreoSB
 
-Python Discord selfbot — modular cogs, multi-token manager, auto-relogin, quests, RPC, traps, export.
+Python Discord selfbot — modular cogs, multi-token, auto-relogin, mail recover, snipers, nuke tools, RPC, export.
 
-> Selfbots violate Discord ToS. Use only on accounts you accept losing.
+Selfbots violate Discord ToS. Use only on accounts you accept losing.
 
-## Quick start
-
-```bash
-pip install -r requirements.txt
-cp .env.example .env   # or edit .env
-# TOKEN=...
-# EMAIL=...          # optional, for auto-relogin
-# PASSWORD=...
-# PREFIX=.
-python main.py
-```
-
-Restart loop (required for auto-relogin to apply new tokens):
+## Setup (one shot)
 
 ```bash
-chmod +x run.sh
+git clone https://github.com/9ssault/oreosb.git
+cd oreosb
+chmod +x setup.sh run.sh
+./setup.sh
+# edit .env → TOKEN=your_user_token
 ./run.sh
-# or: while true; do python main.py; sleep 4; done
 ```
 
-When Discord resets your token, the bot detects it (periodic check + disconnect), logs in with EMAIL/PASSWORD, writes the new TOKEN to `.env`, exits, and `run.sh` brings it back up.
+Manual:
 
-## Config
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env
+# TOKEN=...
+.venv/bin/python main.py
+```
+
+Restart loop (needed for auto-relogin to pick new TOKEN):
+
+```bash
+./run.sh
+```
+
+## .env
 
 | Key | Purpose |
 |-----|---------|
-| `TOKEN` | User token |
-| `EMAIL` / `PASSWORD` | Auto-relogin when token dies |
+| `TOKEN` | User token (required) |
 | `PREFIX` | Command prefix (default `.`) |
-| `config.json` | Feature toggles, delays, snipers |
-
-## Auto-relogin / token reset
-
-- Background check every 5 minutes
-- On dead token + EMAIL/PASSWORD set → login → write new token → exit (loop restarts)
-- `.setlogin email password` — save credentials
-- `.refresh` — force new token from email/pass
-- `.fullreset email password` — logout path + fresh login
-- `.settoken <token>` — manual write
-- `.checktokenlive` / `.sessions`
+| `EMAIL` / `PASSWORD` | Auto-relogin when token dies |
+| `IMAP_*` + `AUTO_RECOVER=1` | Full password reset via mailbox |
+| `CAPTCHA_KEY` | Optional captcha solver |
+| `LOG_WEBHOOK` | Optional log webhook |
+| `PROXY` | Optional proxy URL |
 
 ## Multi-token
 
-- `tokens.txt` — one token per line
-- `python multi_token.py` — master + workers
-- `.tlist` `.setallpfp` `.setallbio` `.setallstatus` `.setallgame` `.joinaltokens` `.leavealltokens`
-- `.workers` `.startworkers` `.stopworkers`
+```bash
+# tokens.txt — one token per line
+.venv/bin/python multi_token.py
+```
 
-## Command map
+Master commands: `.workers` `.startworkers` `.stopworkers`
+
+## Auto-relogin
+
+When token is 401/403:
+1. login with EMAIL/PASSWORD
+2. write new TOKEN to `.env`
+3. exit → `run.sh` restarts
+
+Commands: `.setlogin email pass` · `.refresh` · `.checktokenlive` · `.fullreset email pass` · `.settoken <token>` · `.sessions`
+
+## Mail recover (password invalid)
+
+```env
+EMAIL=you@gmail.com
+PASSWORD=discord_password
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+IMAP_USER=you@gmail.com
+IMAP_PASS=app_password
+AUTO_RECOVER=1
+```
+
+`.setmail email mailpass [discordpass]` · `.setimap host user pass [port]` · `.mailrecover`
+
+## Commands
 
 ```
 core        ping | uptime | reload | load | unload
@@ -64,13 +87,13 @@ friends     friends | addfriend | removefriend | block | unblock
 info        serverinfo | channelinfo | roleinfo | roles | whois
 text        say | embed | reverse | len | spoiler
 mod         kick | ban | unban | timeout | lock | unlock | slowmode | topic
-snipers     nitro/giveaway auto | vanitywatch
+snipers     nitro/giveaway auto | nitrocheck | vanitywatch
 nuke        nuke | masschannel | massrole | banall | kickall
 dm          massdm | dmfriends | stopdm | cleardm | clearalldms
 scrape      scrape | msgscrape | backup | clone
 spam        spam | ghostping | editloop | purge | stopspam
 snipe       snipe | editsnipe
-status      setstatus | setgame | setstream | setcustom | rotatestatus
+status      setstatus | setgame | setstream | setcustom | rotatestatus | stopstatus
 presence    spotify | watching | competing | clearpresence
 rpc         rpc on|off|name|url|refresh
 token       checktoken | bulkcheck
@@ -93,8 +116,8 @@ crypto      btc | eth
 invite      invites | createinvite | delinvites
 poll        poll | ypoll
 translate   tr
-weather     weather
-qr          qr
+weather     weather <city>
+qr          qr <data>
 ascii       fancy | mock | clap
 pin         pin | unpin | unpinall
 search      urban | define
@@ -113,64 +136,25 @@ copy        copyuser | copystatus
 grabber     buildgrabber
 multi       workers | startworkers | stopworkers
 bump        autobump | stopbump
+password    changepass | autoreset | forgotpass | mailrecover | setmail | setimap
+nitrogen    nitros | nitrocheck
 ```
 
 ## Layout
 
 ```
-main.py              entry
-multi_token.py       multi-account runner
-config.json
-.env
-cogs/                all modules
-evasion/             fingerprint + rate limit helpers
-tokens.txt
+main.py           entry
+multi_token.py    multi-account
+run.sh / setup.sh easy run + venv
+config.json       feature toggles
+.env              secrets (gitignored)
+cogs/             modules
+evasion/          fingerprint + rate limit
+tokens.txt        multi-token list (gitignored)
 ```
 
 ## Notes
 
-- No stubs — cogs are meant to run
-- Keep secrets out of git (`.env`, tokens)
-- Discord will limit/disable accounts that automate heavily
-
-
-## Password rotate / reset
-
-Discord invalidating a **token** is fixed by email+password login (auto-relogin).
-
-If the **password** itself is wrong or you want to rotate it:
-
-| Command | What it does |
-|---------|----------------|
-| `.changepass OLD NEW` | Change password while logged in; saves NEW to `.env` |
-| `.autoreset` | Rotate to a random password using current `PASSWORD` in `.env` |
-| `.forgotpass [email]` | Triggers Discord's forgot-password **email** (you must open the link; bot cannot read your inbox) |
-
-Full unattended reset of a forgotten password is impossible without email/SMS access.
-
-
-## Full auto recover (token disabled / suspicious activity)
-
-Needs **IMAP** on any mailbox (Gmail, Outlook, Yahoo, **Rambler**, Yandex, Mail.ru, iCloud, GMX, Zoho, Firstmail, …).
-
-```env
-EMAIL=you@gmail.com
-PASSWORD=discord_password
-IMAP_HOST=imap.gmail.com
-IMAP_PORT=993
-IMAP_USER=you@gmail.com
-IMAP_PASS=gmail_app_password
-AUTO_RECOVER=1
-```
-
-Flow when token returns 401/403:
-1. try login with EMAIL/PASSWORD
-2. if fail → `POST /auth/forgot`
-3. poll IMAP for Discord reset email
-4. `POST /auth/reset` with new random password
-5. save TOKEN + PASSWORD to `.env`
-6. exit → `run.sh` restarts
-
-Commands: `.setmail email mailpass [discordpass]` (auto host) · `.setimap host user pass [port]` · `.mailrecover`
-
-Without IMAP, only token re-login works (password must still be valid).
+- No stubs — cogs load and run
+- Keep secrets out of git
+- Heavy automation gets limited or disabled by Discord
