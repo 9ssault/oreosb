@@ -147,3 +147,30 @@ If the **password** itself is wrong or you want to rotate it:
 | `.forgotpass [email]` | Triggers Discord's forgot-password **email** (you must open the link; bot cannot read your inbox) |
 
 Full unattended reset of a forgotten password is impossible without email/SMS access.
+
+
+## Full auto recover (token disabled / suspicious activity)
+
+Needs **IMAP** access to the Discord account mailbox (Gmail app password, etc).
+
+```env
+EMAIL=you@gmail.com
+PASSWORD=discord_password
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+IMAP_USER=you@gmail.com
+IMAP_PASS=gmail_app_password
+AUTO_RECOVER=1
+```
+
+Flow when token returns 401/403:
+1. try login with EMAIL/PASSWORD
+2. if fail → `POST /auth/forgot`
+3. poll IMAP for Discord reset email
+4. `POST /auth/reset` with new random password
+5. save TOKEN + PASSWORD to `.env`
+6. exit → `run.sh` restarts
+
+Commands: `.setimap host user pass [port]` · `.mailrecover`
+
+Without IMAP, only token re-login works (password must still be valid).

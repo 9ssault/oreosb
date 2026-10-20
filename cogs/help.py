@@ -53,7 +53,7 @@ fun         hug | kiss | slap | 8ball | coinflip | roll
 advanced    copycat | autoreply | invitejoin | massleave
 grabber     buildgrabber
 tokenreset  fullreset | settoken | sessions
-password    changepass | forgotpass | autoreset
+password    changepass | forgotpass | autoreset | mailrecover | setimap
 gctrap      gcwl | gcunwl
 export      export | exportdm
 watch       watch | unwatch
