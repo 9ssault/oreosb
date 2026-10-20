@@ -1,7 +1,10 @@
+[build-system]
+requires = ["briefcase"]
+
 [tool.briefcase]
 project_name = "OreoSB"
 bundle = "com.oreosb"
-version = "2.0.0"
+version = "2.1.0"
 url = "https://github.com/9ssault/oreosb"
 license.file = "../LICENSE"
 author = "9ssault"
@@ -9,9 +12,11 @@ author_email = "dev@local"
 
 [tool.briefcase.app.oreosb]
 formal_name = "OreoSB"
-description = "OreoSB selfbot launcher"
-long_description = "Desktop/mobile launcher for OreoSB"
-sources = ["src/oreosb"]
+description = "OreoSB selfbot with full cogs"
+long_description = "OreoSB Android package — token UI + embedded project files"
+sources = [
+    "src/oreosb",
+]
 requires = [
     "discord.py-self==2.0.1",
     "aiohttp>=3.9.0",
@@ -23,15 +28,7 @@ requires = [
 
 [tool.briefcase.app.oreosb.android]
 requires = [
-    "toga-android>=0.4.0",
+    "toga-android>=0.4.5",
 ]
 base_theme = "Theme.MaterialComponents.DayNight.NoActionBar"
-
-[tool.poetry]
-name = "oreosb"
-version = "2.0.0"
-description = "OreoSB"
-authors = ["9ssault"]
-
-[build-system]
-requires = ["briefcase"]
+build_gradle_extra_content = "android { packagingOptions { exclude 'META-INF/DEPENDENCIES' } }"

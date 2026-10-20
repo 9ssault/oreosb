@@ -1,5 +1,3 @@
-"""OreoSB Android entry package for Briefcase."""
-
 def main():
-    from .app import run
-    run()
+    from .app import main as _main
+    _main()
