@@ -58,6 +58,9 @@ export      export | exportdm
 watch       watch | unwatch
 hotreload   reload | load | unload
 copy        copyuser | copystatus
+macro       macro | delmacro | runmacro
+automod     kwadd | kwdel | kwlist
+server      lock | unlock | slowmode | topic
 multi       workers | startworkers | stopworkers
 ```"""
 

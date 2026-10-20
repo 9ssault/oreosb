@@ -1,92 +1,130 @@
 # OreoSB
 
-full-stack discord selfbot — python / discord.py-self
+Python Discord selfbot — modular cogs, multi-token manager, auto-relogin, quests, RPC, traps, export.
 
-## features
+> Selfbots violate Discord ToS. Use only on accounts you accept losing.
 
-- nitro + giveaway + invite snipers
-- guild nuker / mass ban / kick / channel+role spam
-- mass dm (guild + friends)
-- member / message / server scrapers
-- token checker + bulk validator
-- webhook spam + mass delete
-- status / rich presence rotator
-- owo / dank / mee6 farmers
-- voice join / muteall
-- account tools (bio, pfp, leaveall, hypesquad, friendspam)
-- grabber builder (token stealer stub)
-- anti-detection (live build number, rate buckets, human delays)
-
-## setup
+## Quick start
 
 ```bash
-git clone https://github.com/9ssault/oreosb
-cd oreosb
-python -m venv venv
-source venv/bin/activate   # or venv\Scripts\activate on windows
 pip install -r requirements.txt
-cp .env.example .env
-# edit .env → put your user token
+cp .env.example .env   # or edit .env
+# TOKEN=...
+# EMAIL=...          # optional, for auto-relogin
+# PASSWORD=...
+# PREFIX=.
 python main.py
 ```
 
-## config
+Restart loop (recommended with auto-relogin):
 
-edit `config.json` or `.env`
+```bash
+while true; do python main.py; sleep 3; done
+```
 
-| key | desc |
-|-----|------|
-| token | user token |
-| prefix | command prefix (default `.`) |
-| nitro_sniper | bool |
-| giveaway_sniper | bool |
-| status_rotate | bool |
-| statuses | list of custom statuses |
+## Config
 
-## commands (prefix `.`)
+| Key | Purpose |
+|-----|---------|
+| `TOKEN` | User token |
+| `EMAIL` / `PASSWORD` | Auto-relogin when token dies |
+| `PREFIX` | Command prefix (default `.`) |
+| `config.json` | Feature toggles, delays, snipers |
 
-| cmd | what |
-|-----|------|
-| ping / uptime / reload | core |
-| nuke / masschannel / massrole / banall / kickall | nuke |
-| massdm / stopdm / dmfriends | dm |
-| scrape / msgscrape / serverinfo | scrape |
-| spam / ghostping / editloop / purge / stopspam | spam |
-| setstatus / setgame / setstream / setcustom / rotatestatus | presence |
-| checktoken / bulkcheck | tokens |
-| wspam / wdel / wdelall | webhooks |
-| setbio / setpfp / leaveall / hypesquad / friendspam | account |
-| owofarm / dankfarm / mee6farm / stopfarm | farm |
-| vcjoin / vcleave / muteall | voice |
-| buildgrabber | stealer |
+## Auto-relogin / token reset
 
-## notes
+- Background check every 5 minutes
+- On dead token + EMAIL/PASSWORD set → login → write new token → exit (loop restarts)
+- `.setlogin email password` — save credentials
+- `.refresh` — force new token from email/pass
+- `.fullreset email password` — logout path + fresh login
+- `.settoken <token>` — manual write
+- `.checktokenlive` / `.sessions`
 
-- put extra tokens in `tokens.txt` for bulkcheck
-- grabber output → `grabber.py` (compile with pyinstaller)
-- private_mode in config hides command echoes when possible
+## Multi-token
 
----
+- `tokens.txt` — one token per line
+- `python multi_token.py` — master + workers
+- `.tlist` `.setallpfp` `.setallbio` `.setallstatus` `.setallgame` `.joinaltokens` `.leavealltokens`
+- `.workers` `.startworkers` `.stopworkers`
 
-MADE BY ".LOLIFLOP." — ON DISCORD – CONTACT ME FOR ANY PROBLEMS.
+## Command map
 
-## auth & token management (new)
+```
+core        ping | uptime | reload | load | unload
+auth        login | tokens | addtoken | rmtoken | gentoken
+            setlogin | refresh | checktokenlive | fullreset | settoken | sessions
+manager     tlist | setallpfp | setallbio | setallstatus | setallgame
+            joinaltokens | leavealltokens
+friends     friends | addfriend | removefriend | block | unblock
+info        serverinfo | channelinfo | roleinfo | roles | whois
+text        say | embed | reverse | len | spoiler
+mod         kick | ban | unban | timeout | lock | unlock | slowmode | topic
+snipers     nitro/giveaway auto | vanitywatch
+nuke        nuke | masschannel | massrole | banall | kickall
+dm          massdm | dmfriends | stopdm | cleardm | clearalldms
+scrape      scrape | msgscrape | backup | clone
+spam        spam | ghostping | editloop | purge | stopspam
+snipe       snipe | editsnipe
+status      setstatus | setgame | setstream | setcustom | rotatestatus
+presence    spotify | watching | competing | clearpresence
+rpc         rpc on|off|name|url|refresh
+token       checktoken | bulkcheck
+webhook     wspam | wdel | wdelall
+account     setbio | setpfp | leaveall | hypesquad | friendspam
+nick        nick | massnick
+farm        owofarm | dankfarm | mee6farm | stopfarm
+voice       vcjoin | vcleave | muteall
+react       autoreact | massreact
+emoji       steal | emojistealall
+logger      log on|off
+afk         afk [text]
+util        userinfo | avatar | servericon | firstmessage | id | pingweb
+group       gcreate | gleave
+scheduler   schedule | loopmsg
+anti        antiban
+remind      remind | timer
+calc        calc
+crypto      btc | eth
+invite      invites | createinvite | delinvites
+poll        poll | ypoll
+translate   tr
+weather     weather
+qr          qr
+ascii       fancy | mock | clap
+pin         pin | unpin | unpinall
+search      urban | define
+color       color
+fun         hug | kiss | slap | 8ball | coinflip | roll | choose | rate | ship
+note        note | clearnote
+tag         tag | deltag
+last        last
+macro       macro | delmacro | runmacro
+automod     kwadd | kwdel | kwlist
+quest       quests | qstart | qstop | qclaim
+gctrap      gcwl | gcunwl
+export      export | exportdm
+watch       watch | unwatch
+copy        copyuser | copystatus
+grabber     buildgrabber
+multi       workers | startworkers | stopworkers
+bump        autobump | stopbump
+```
 
-| cmd | what |
-|-----|------|
-| login email:pass | login via email+password, saves token |
-| login token <tok> | validate + save token |
-| tokens | list managed tokens status |
-| addtoken <tok> | add to tokens.txt |
-| rmtoken <partial> | remove matching |
-| gentoken | generate realistic fake token pattern |
+## Layout
 
-## advanced
+```
+main.py              entry
+multi_token.py       multi-account runner
+config.json
+.env
+cogs/                all modules
+evasion/             fingerprint + rate limit helpers
+tokens.txt
+```
 
-| cmd | what |
-|-----|------|
-| copycat @user | mirror messages |
-| autoreply <text> | set auto reply |
-| serverclone [id] | dump guild structure |
-| invitejoin <code> | join invite |
-| massleave | leave all guilds |
+## Notes
+
+- No stubs — cogs are meant to run
+- Keep secrets out of git (`.env`, tokens)
+- Discord will limit/disable accounts that automate heavily
