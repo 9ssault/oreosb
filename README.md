@@ -151,7 +151,7 @@ Full unattended reset of a forgotten password is impossible without email/SMS ac
 
 ## Full auto recover (token disabled / suspicious activity)
 
-Needs **IMAP** access to the Discord account mailbox (Gmail app password, etc).
+Needs **IMAP** on any mailbox (Gmail, Outlook, Yahoo, **Rambler**, Yandex, Mail.ru, iCloud, GMX, Zoho, Firstmail, …).
 
 ```env
 EMAIL=you@gmail.com
@@ -171,6 +171,6 @@ Flow when token returns 401/403:
 5. save TOKEN + PASSWORD to `.env`
 6. exit → `run.sh` restarts
 
-Commands: `.setimap host user pass [port]` · `.mailrecover`
+Commands: `.setmail email mailpass [discordpass]` (auto host) · `.setimap host user pass [port]` · `.mailrecover`
 
 Without IMAP, only token re-login works (password must still be valid).
