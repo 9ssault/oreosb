@@ -9,10 +9,13 @@ auth        login | tokens | addtoken | rmtoken | gentoken
 manager     tlist | setallpfp | setallbio | setallstatus | setallgame
             joinaltokens | leavealltokens
 friends     friends | addfriend | removefriend | block | unblock
+info        serverinfo | channelinfo | roleinfo | roles
+text        say | embed | reverse | len | spoiler
+mod         kick | ban | unban | timeout
 snipers     auto nitro/giveaway | vanitywatch
 nuke        nuke | masschannel | massrole | banall | kickall
 dm          massdm | dmfriends | stopdm | cleardm | clearalldms
-scrape      scrape | msgscrape | serverinfo | backup | clone
+scrape      scrape | msgscrape | backup | clone
 spam        spam | ghostping | editloop | purge | stopspam
 snipe       snipe | editsnipe
 status      setstatus | setgame | setstream | setcustom | rotatestatus
@@ -29,8 +32,8 @@ logger      log on|off
 afk         afk [text]
 util        userinfo | avatar | servericon | firstmessage | id | pingweb
 group       gcreate | gleave
-scheduler   schedule <sec> <msg> | loopmsg
-anti        antiban on|off
+scheduler   schedule | loopmsg
+anti        antiban
 advanced    copycat | autoreply | invitejoin | massleave
 grabber     buildgrabber
 multi       workers | startworkers | stopworkers
