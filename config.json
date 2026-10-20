@@ -2,10 +2,7 @@
   "token": "",
   "prefix": ".",
   "log_webhook": "",
-  "delay": [
-    0.4,
-    2.5
-  ],
+  "delay": [0.4, 2.5],
   "proxy": null,
   "captcha_key": "",
   "captcha_provider": "2captcha",
@@ -15,14 +12,9 @@
   "max_joins_per_hour": 5,
   "status_rotate": false,
   "status_interval": 30,
-  "statuses": [
-    "Gaming",
-    "Chilling",
-    "Coding",
-    "Watching"
-  ],
+  "statuses": ["Gaming", "Chilling", "Coding", "Watching"],
   "afk_message": "AFK",
   "private_mode": true,
-  "test_guild": "1561989222649434175",
-  "test_channel": "1561989222196322334"
+  "test_guild": "",
+  "test_channel": ""
 }

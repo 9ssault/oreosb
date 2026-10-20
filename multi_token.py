@@ -1,108 +1,113 @@
-# multi_token.py — master multi-token runner
-# each token can have its own config in configs/<token_id>.json
-# master token (from .env / config.json) can control all via commands
 import asyncio
 import json
 import os
 from pathlib import Path
-import discord
-from discord.ext import commands
 from dotenv import load_dotenv
 from colorama import Fore, init
+import discord
+from discord.ext import commands
 
 init(autoreset=True)
 load_dotenv()
 
-MASTER_TOKEN = os.getenv("TOKEN") or json.load(open("config.json")).get("token")
-PREFIX = os.getenv("PREFIX", ".")
+with open("config.json") as f:
+    BASE_CFG = json.load(f)
+
+MASTER_TOKEN = (os.getenv("TOKEN") or BASE_CFG.get("token") or "").strip()
+PREFIX = os.getenv("PREFIX") or BASE_CFG.get("prefix") or "."
+WORKER_COGS = ["sniper", "status", "farmer", "presence", "rpc"]
 
 class TokenWorker:
-    def __init__(self, token: str, name: str = None):
-        self.token = token
-        self.name = name or token[:12]
+    def __init__(self, token: str):
+        self.token = token.strip()
+        self.key = self.token[:16]
         self.bot = None
         self.task = None
-        self.cfg = self._load_cfg()
-
-    def _load_cfg(self):
-        # per-token config if exists
-        uid = None
-        path = Path("configs")
-        path.mkdir(exist_ok=True)
-        # fallback to global
-        with open("config.json") as f:
-            base = json.load(f)
-        return base
 
     async def start(self):
-        bot = commands.Bot(command_prefix=PREFIX, self_bot=True, chunk_guilds_at_startup=False, help_command=None)
+        bot = commands.Bot(
+            command_prefix=PREFIX,
+            self_bot=True,
+            chunk_guilds_at_startup=False,
+            help_command=None,
+        )
+        bot.cfg = dict(BASE_CFG)
         self.bot = bot
 
         @bot.event
         async def on_ready():
             print(f"{Fore.GREEN}[WORKER] {bot.user} online")
 
-        # load core cogs only for workers (lighter)
-        for cog in ["sniper", "status", "farmer"]:
+        for cog in WORKER_COGS:
             try:
                 await bot.load_extension(f"cogs.{cog}")
             except Exception as e:
-                print(f"{Fore.YELLOW}[WORKER] cog {cog} skip: {e}")
+                print(f"{Fore.YELLOW}[WORKER] {cog}: {e}")
 
         try:
             await bot.start(self.token, log_handler=None)
         except Exception as e:
-            print(f"{Fore.RED}[WORKER] {self.name} died: {e}")
+            print(f"{Fore.RED}[WORKER] {self.key} died: {e}")
 
 async def run_master():
-    with open("config.json") as f:
-        cfg = json.load(f)
-    bot = commands.Bot(command_prefix=PREFIX, self_bot=True, chunk_guilds_at_startup=False, help_command=None)
-    bot.cfg = cfg
+    bot = commands.Bot(
+        command_prefix=PREFIX,
+        self_bot=True,
+        chunk_guilds_at_startup=False,
+        help_command=None,
+    )
+    bot.cfg = BASE_CFG
     bot.workers = {}
 
     @bot.event
     async def on_ready():
-        print(f"{Fore.MAGENTA}[MASTER] {bot.user} ready — multi-token control online")
+        print(f"{Fore.MAGENTA}[MASTER] {bot.user} multi-token control online")
 
-    # load ALL cogs on master
-    for f in os.listdir("cogs"):
-        if f.endswith(".py") and not f.startswith("_"):
+    for fname in sorted(os.listdir("cogs")):
+        if fname.endswith(".py") and not fname.startswith("_"):
             try:
-                await bot.load_extension(f"cogs.{f[:-3]}")
-                print(f"{Fore.CYAN}[MASTER] loaded {f}")
+                await bot.load_extension(f"cogs.{fname[:-3]}")
+                print(f"{Fore.CYAN}[MASTER] {fname}")
             except Exception as e:
-                print(f"{Fore.RED}[MASTER] fail {f}: {e}")
+                print(f"{Fore.RED}[MASTER] {fname}: {e}")
 
     @bot.command(name="workers")
     async def workers_cmd(ctx):
         await ctx.message.delete()
-        lines = [f"`{n}` → {w.bot.user if w.bot and w.bot.user else 'starting'}" for n, w in bot.workers.items()]
-        await ctx.send("workers:\n" + ("\n".join(lines) or "none"), delete_after=10)
+        lines = []
+        for k, w in bot.workers.items():
+            u = w.bot.user if w.bot and w.bot.user else "starting"
+            lines.append(f"`{k}` → {u}")
+        await ctx.send("workers:\n" + ("\n".join(lines) or "none"), delete_after=12)
 
     @bot.command(name="startworkers")
     async def startworkers(ctx):
         await ctx.message.delete()
-        try:
-            with open("tokens.txt") as f:
-                toks = [l.strip() for l in f if l.strip() and l.strip() != MASTER_TOKEN]
-        except FileNotFoundError:
-            await ctx.send("tokens.txt empty", delete_after=3)
+        path = Path("tokens.txt")
+        if not path.exists():
+            await ctx.send("tokens.txt missing", delete_after=4)
             return
+        toks = [l.strip() for l in path.read_text().splitlines() if l.strip() and l.strip() != MASTER_TOKEN]
+        launched = 0
         for t in toks:
-            if t in bot.workers:
+            key = t[:16]
+            if key in bot.workers:
                 continue
             w = TokenWorker(t)
-            bot.workers[t[:16]] = w
+            bot.workers[key] = w
             w.task = asyncio.create_task(w.start())
-        await ctx.send(f"launched {len(toks)} workers", delete_after=5)
+            launched += 1
+        await ctx.send(f"launched {launched} (total {len(bot.workers)})", delete_after=5)
 
     @bot.command(name="stopworkers")
     async def stopworkers(ctx):
         await ctx.message.delete()
-        for w in bot.workers.values():
-            if w.bot:
-                await w.bot.close()
+        for w in list(bot.workers.values()):
+            try:
+                if w.bot:
+                    await w.bot.close()
+            except Exception:
+                pass
             if w.task:
                 w.task.cancel()
         bot.workers.clear()
@@ -112,6 +117,6 @@ async def run_master():
 
 if __name__ == "__main__":
     if not MASTER_TOKEN:
-        print("TOKEN missing")
+        print(f"{Fore.RED}TOKEN missing")
         raise SystemExit(1)
     asyncio.run(run_master())
