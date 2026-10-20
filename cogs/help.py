@@ -52,6 +52,12 @@ color       color <hex>
 fun         hug | kiss | slap | 8ball | coinflip | roll
 advanced    copycat | autoreply | invitejoin | massleave
 grabber     buildgrabber
+tokenreset  fullreset | settoken | sessions
+gctrap      gcwl | gcunwl
+export      export | exportdm
+watch       watch | unwatch
+hotreload   reload | load | unload
+copy        copyuser | copystatus
 multi       workers | startworkers | stopworkers
 ```"""
 
