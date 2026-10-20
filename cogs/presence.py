@@ -1,4 +1,3 @@
-import asyncio
 import discord
 from discord.ext import commands
 
@@ -9,23 +8,29 @@ class Presence(commands.Cog):
     @commands.command(name="spotify")
     async def spotify(self, ctx, *, title: str = "Unknown"):
         await ctx.message.delete()
-        act = discord.Activity(type=discord.ActivityType.listening, name=title)
+        act = discord.Activity(type=discord.ActivityType.listening, name=title[:128])
         await self.bot.change_presence(activity=act)
-        await ctx.send(f"listening {title}", delete_after=3)
+        await ctx.send(f"listening `{title}`", delete_after=3)
 
     @commands.command(name="watching")
     async def watching(self, ctx, *, title: str):
         await ctx.message.delete()
-        act = discord.Activity(type=discord.ActivityType.watching, name=title)
+        act = discord.Activity(type=discord.ActivityType.watching, name=title[:128])
         await self.bot.change_presence(activity=act)
-        await ctx.send(f"watching {title}", delete_after=3)
+        await ctx.send(f"watching `{title}`", delete_after=3)
 
     @commands.command(name="competing")
     async def competing(self, ctx, *, title: str):
         await ctx.message.delete()
-        act = discord.Activity(type=discord.ActivityType.competing, name=title)
+        act = discord.Activity(type=discord.ActivityType.competing, name=title[:128])
         await self.bot.change_presence(activity=act)
-        await ctx.send(f"competing {title}", delete_after=3)
+        await ctx.send(f"competing `{title}`", delete_after=3)
+
+    @commands.command(name="playing")
+    async def playing(self, ctx, *, title: str):
+        await ctx.message.delete()
+        await self.bot.change_presence(activity=discord.Game(name=title[:128]))
+        await ctx.send(f"playing `{title}`", delete_after=3)
 
     @commands.command(name="clearpresence")
     async def clearpresence(self, ctx):

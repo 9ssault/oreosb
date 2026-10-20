@@ -1,39 +1,50 @@
-# cogs/voice.py
-import asyncio
 import discord
 from discord.ext import commands
 
-class VoiceTools(commands.Cog):
+class Voice(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="vcjoin")
-    async def vcjoin(self, ctx, channel_id: int = None):
+    async def vcjoin(self, ctx, channel: discord.VoiceChannel = None):
         await ctx.message.delete()
-        ch = None
-        if channel_id:
-            ch = self.bot.get_channel(channel_id)
-        elif ctx.author.voice:
+        ch = channel
+        if not ch and ctx.author.voice:
             ch = ctx.author.voice.channel
-        if ch:
-            await ch.connect()
+        if not ch:
+            await ctx.send("need voice channel", delete_after=4)
+            return
+        try:
+            await ch.connect(reconnect=False, self_deaf=True)
+            await ctx.send(f"joined `{ch.name}`", delete_after=4)
+        except Exception as e:
+            await ctx.send(f"fail {e}", delete_after=5)
 
     @commands.command(name="vcleave")
     async def vcleave(self, ctx):
         await ctx.message.delete()
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
+            await ctx.send("left vc", delete_after=3)
+        else:
+            await ctx.send("not in vc", delete_after=3)
 
     @commands.command(name="muteall")
     async def muteall(self, ctx):
         await ctx.message.delete()
-        for m in ctx.guild.members:
-            if m.voice:
-                try:
-                    await m.edit(mute=True)
-                except Exception:
-                    pass
-                await asyncio.sleep(0.2)
+        if not ctx.author.voice or not ctx.author.voice.channel:
+            await ctx.send("join a vc first", delete_after=4)
+            return
+        n = 0
+        for m in ctx.author.voice.channel.members:
+            if m.id == self.bot.user.id:
+                continue
+            try:
+                await m.edit(mute=True)
+                n += 1
+            except Exception:
+                pass
+        await ctx.send(f"server-muted {n}", delete_after=4)
 
 async def setup(bot):
-    await bot.add_cog(VoiceTools(bot))
+    await bot.add_cog(Voice(bot))
