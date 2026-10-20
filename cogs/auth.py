@@ -2,11 +2,32 @@ import asyncio
 import aiohttp
 import json
 import os
+import base64
+import random
+import string
 import discord
 from discord.ext import commands
 from colorama import Fore
 
 API = "https://discord.com/api/v10"
+
+async def _super_props() -> str:
+    try:
+        from evasion.fingerprint import get_super_properties
+        return await get_super_properties("electron")
+    except Exception:
+        props = {
+            "os": "Windows",
+            "browser": "Discord Client",
+            "release_channel": "stable",
+            "client_version": "1.0.9181",
+            "os_version": "10.0.22631",
+            "os_arch": "x64",
+            "system_locale": "en-US",
+            "client_build_number": 373069,
+            "client_event_source": None,
+        }
+        return base64.b64encode(json.dumps(props).encode()).decode()
 
 class Auth(commands.Cog):
     def __init__(self, bot):
@@ -18,9 +39,18 @@ class Auth(commands.Cog):
             self.session = aiohttp.ClientSession()
         return self.session
 
+    async def _headers(self, token=None):
+        h = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9181 Chrome/138.0.7204.92 Electron/36.2.1 Safari/537.36",
+            "X-Super-Properties": await _super_props(),
+        }
+        if token:
+            h["Authorization"] = token
+        return h
+
     @commands.command(name="login")
     async def login(self, ctx, method: str = None, *, credentials: str = None):
-        """login email:pass  OR  login token <token>"""
         await ctx.message.delete()
         if not method:
             await ctx.send("usage: `.login email:pass` or `.login token <token>`", delete_after=6)
@@ -39,7 +69,6 @@ class Auth(commands.Cog):
             else:
                 await ctx.send("invalid token", delete_after=4)
             return
-        # email:pass path
         if ":" in method and not credentials:
             credentials = method
         if not credentials or ":" not in credentials:
@@ -55,7 +84,6 @@ class Auth(commands.Cog):
             cfg["token"] = tok
             with open("config.json", "w") as f:
                 json.dump(cfg, f, indent=2)
-            # also append to tokens.txt
             with open("tokens.txt", "a") as f:
                 f.write(tok + "\n")
             await ctx.send("saved + appended tokens.txt — restart to use", delete_after=5)
@@ -71,25 +99,21 @@ class Auth(commands.Cog):
             "login_source": None,
             "gift_code_sku_id": None,
         }
-        headers = {
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0",
-            "X-Super-Properties": "eyJvcyI6IldpbmRvd3MiLCJicm93c2VyIjoiRmlyZWZveCIsImRldmljZSI6IiIsInN5c3RlbV9sb2NhbGUiOiJlbi1VUyIsImJyb3dzZXJfdXNlcl9hZ2VudCI6Ik1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQ7IHJ2OjEzNi4wKSBHZWNrby8yMDEwMDEwMSBGaXJlZm94LzEzNi4wIiwiYnJvd3Nlcl92ZXJzaW9uIjoiMTM2LjAiLCJvc192ZXJzaW9uIjoiMTAiLCJyZWZlcnJlciI6IiIsInJlZmVycmluZ19kb21haW4iOiIiLCJyZWZlcnJlcl9jdXJyZW50IjoiIiwicmVmZXJyaW5nX2RvbWFpbl9jdXJyZW50IjoiIiwicmVsZWFzZV9jaGFubmVsIjoic3RhYmxlIiwiY2xpZW50X2J1aWxkX251bWJlciI6MzczMDY5LCJjbGllbnRfZXZlbnRfc291cmNlIjpudWxsfQ==",
-        }
+        headers = await self._headers()
         try:
             async with s.post(f"{API}/auth/login", json=payload, headers=headers) as r:
                 data = await r.json(content_type=None)
-                if r.status == 200 and "token" in data:
+                if r.status == 200 and isinstance(data, dict) and "token" in data:
                     return {"token": data["token"]}
-                if "mfa" in data or data.get("mfa"):
+                if isinstance(data, dict) and (data.get("mfa") or data.get("ticket")):
                     return {"error": "2FA required — use token login or provide ticket"}
-                return {"error": data.get("message") or str(data)[:120]}
+                return {"error": (data.get("message") if isinstance(data, dict) else str(data))[:120]}
         except Exception as e:
             return {"error": str(e)}
 
     async def _validate(self, token: str):
         s = await self._session()
-        headers = {"Authorization": token, "Content-Type": "application/json"}
+        headers = await self._headers(token)
         try:
             async with s.get(f"{API}/users/@me", headers=headers) as r:
                 if r.status == 200:
@@ -100,7 +124,6 @@ class Auth(commands.Cog):
 
     @commands.command(name="tokens")
     async def tokens(self, ctx):
-        """list managed tokens status"""
         await ctx.message.delete()
         try:
             with open("tokens.txt") as f:
@@ -108,9 +131,9 @@ class Auth(commands.Cog):
         except FileNotFoundError:
             await ctx.send("no tokens.txt", delete_after=3)
             return
-        valid = locked = dead = 0
+        valid = dead = 0
         lines = []
-        for t in toks[:30]:  # cap
+        for t in toks[:30]:
             info = await self._validate(t)
             if info:
                 valid += 1
@@ -118,7 +141,7 @@ class Auth(commands.Cog):
                 lines.append(f"`{t[:12]}...` {info['username']} [{nitro}]")
             else:
                 dead += 1
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(0.35)
         summary = f"valid:{valid} dead:{dead} (showing up to 30)"
         body = "\n".join(lines) or "none"
         await ctx.send(f"{summary}\n{body}", delete_after=20)
@@ -149,12 +172,7 @@ class Auth(commands.Cog):
 
     @commands.command(name="gentoken")
     async def gentoken(self, ctx):
-        """generate realistic-looking fake token (for testing patterns)"""
         await ctx.message.delete()
-        import random, string, base64
-        def b64(n):
-            return base64.b64encode(os.urandom(n)).decode().rstrip("=").replace("+", "").replace("/", "")[:n]
-        # user id part (snowflake-ish)
         uid = str(random.randint(10**17, 10**18 - 1))
         part1 = base64.b64encode(uid.encode()).decode().rstrip("=")
         part2 = "".join(random.choices(string.ascii_letters + string.digits + "-_", k=6))

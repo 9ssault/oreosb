@@ -4,23 +4,24 @@ from discord.ext import commands
 HELP = """```
 OreoSB
 ──────
-core        ping | uptime | reload
+core        ping | uptime | reload | load | unload
 auth        login | tokens | addtoken | rmtoken | gentoken
-            setlogin | refresh | checktokenlive
+            setlogin | refresh | checktokenlive | fullreset | settoken | sessions
 manager     tlist | setallpfp | setallbio | setallstatus | setallgame
             joinaltokens | leavealltokens
 friends     friends | addfriend | removefriend | block | unblock
-info        serverinfo | channelinfo | roleinfo | roles
+info        serverinfo | channelinfo | roleinfo | roles | whois
 text        say | embed | reverse | len | spoiler
-mod         kick | ban | unban | timeout
-snipers     auto nitro/giveaway | vanitywatch
+mod         kick | ban | unban | timeout | lock | unlock | slowmode | topic
+snipers     nitro/giveaway auto | nitrocheck | vanitywatch
 nuke        nuke | masschannel | massrole | banall | kickall
 dm          massdm | dmfriends | stopdm | cleardm | clearalldms
 scrape      scrape | msgscrape | backup | clone
 spam        spam | ghostping | editloop | purge | stopspam
 snipe       snipe | editsnipe
-status      setstatus | setgame | setstream | setcustom | rotatestatus
+status      setstatus | setgame | setstream | setcustom | rotatestatus | stopstatus
 presence    spotify | watching | competing | clearpresence
+rpc         rpc on|off|name|url|refresh
 token       checktoken | bulkcheck
 webhook     wspam | wdel | wdelall
 account     setbio | setpfp | leaveall | hypesquad | friendspam
@@ -35,34 +36,34 @@ util        userinfo | avatar | servericon | firstmessage | id | pingweb
 group       gcreate | gleave
 scheduler   schedule | loopmsg
 anti        antiban
-rpc         rpc on|off|name|url|refresh
-quest       quests | qstart | qstop | qclaim
-remind      remind <sec> <msg> | timer <sec>
-calc        calc <expr>
+remind      remind | timer
+calc        calc
 crypto      btc | eth
 invite      invites | createinvite | delinvites
-poll        poll | ypoll
-translate   tr <lang> <text>
+poll        poll | ypoll | mpoll
+translate   tr
 weather     weather <city>
 qr          qr <data>
 ascii       fancy | mock | clap
 pin         pin | unpin | unpinall
 search      urban | define
-color       color <hex>
-fun         hug | kiss | slap | 8ball | coinflip | roll
-advanced    copycat | autoreply | invitejoin | massleave
-grabber     buildgrabber
-tokenreset  fullreset | settoken | sessions
-password    changepass | forgotpass | autoreset | mailrecover | setmail | setimap
+color       color
+fun         hug | kiss | slap | 8ball | coinflip | roll | choose | rate | ship
+note        note | clearnote
+tag         tag | deltag
+last        last
+macro       macro | delmacro | runmacro
+automod     kwadd | kwdel | kwlist
+quest       quests | qstart | qstop | qclaim
 gctrap      gcwl | gcunwl
 export      export | exportdm
 watch       watch | unwatch
-hotreload   reload | load | unload
 copy        copyuser | copystatus
-macro       macro | delmacro | runmacro
-automod     kwadd | kwdel | kwlist
-server      lock | unlock | slowmode | topic
+grabber     buildgrabber
 multi       workers | startworkers | stopworkers
+bump        autobump | stopbump
+password    changepass | autoreset | forgotpass | mailrecover | setmail | setimap
+nitrogen    nitros | nitrocheck
 ```"""
 
 class Help(commands.Cog):

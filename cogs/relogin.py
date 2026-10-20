@@ -2,11 +2,26 @@ import asyncio
 import aiohttp
 import json
 import os
+import base64
 from pathlib import Path
 import discord
 from discord.ext import commands, tasks
 
 API = "https://discord.com/api/v10"
+
+async def _super_props() -> str:
+    try:
+        from evasion.fingerprint import get_super_properties
+        return await get_super_properties("electron")
+    except Exception:
+        props = {
+            "os": "Windows",
+            "browser": "Discord Client",
+            "release_channel": "stable",
+            "client_build_number": 373069,
+            "client_event_source": None,
+        }
+        return base64.b64encode(json.dumps(props).encode()).decode()
 
 class Relogin(commands.Cog):
     def __init__(self, bot):
@@ -19,12 +34,13 @@ class Relogin(commands.Cog):
     def cog_unload(self):
         self.check_loop.cancel()
 
-    def _headers(self, token=None):
+    async def _headers(self, token=None):
         t = token or getattr(self.bot.http, "token", None) or ""
         return {
             "Authorization": t,
             "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9181 Chrome/138.0.7204.92 Electron/36.2.1 Safari/537.36",
+            "X-Super-Properties": await _super_props(),
         }
 
     async def validate(self, token: str) -> bool:
@@ -32,7 +48,7 @@ class Relogin(commands.Cog):
             return False
         try:
             async with aiohttp.ClientSession() as s:
-                async with s.get(f"{API}/users/@me", headers=self._headers(token), timeout=10) as r:
+                async with s.get(f"{API}/users/@me", headers=await self._headers(token), timeout=10) as r:
                     return r.status == 200
         except Exception:
             return False
@@ -45,10 +61,8 @@ class Relogin(commands.Cog):
             "login_source": None,
             "gift_code_sku_id": None,
         }
-        headers = {
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        }
+        headers = await self._headers("")
+        headers.pop("Authorization", None)
         try:
             async with aiohttp.ClientSession() as s:
                 async with s.post(f"{API}/auth/login", json=payload, headers=headers) as r:
