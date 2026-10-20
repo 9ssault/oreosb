@@ -8,19 +8,23 @@ class Bump(commands.Cog):
         self.task = None
 
     @commands.command(name="autobump")
-    async def autobump(self, ctx, delay: int = 7200):
+    async def autobump(self, ctx, interval: int = 7200):
         await ctx.message.delete()
+        interval = max(3600, interval)
         if self.task:
             self.task.cancel()
+        ch = ctx.channel
+
         async def loop():
             while True:
                 try:
-                    await ctx.channel.send("!d bump")
+                    await ch.send("!d bump")
                 except Exception:
                     pass
-                await asyncio.sleep(delay)
+                await asyncio.sleep(interval)
+
         self.task = asyncio.create_task(loop())
-        await ctx.send(f"autobump every {delay}s", delete_after=4)
+        await ctx.send(f"autobump every {interval}s", delete_after=4)
 
     @commands.command(name="stopbump")
     async def stopbump(self, ctx):

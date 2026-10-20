@@ -5,37 +5,42 @@ from discord.ext import commands
 
 NOTES = Path("notes.json")
 
-def load():
-    if NOTES.exists():
-        return json.loads(NOTES.read_text())
-    return {}
-
-def save(data):
-    NOTES.write_text(json.dumps(data, indent=2))
-
 class Note(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.data = {}
+        if NOTES.exists():
+            try:
+                self.data = json.loads(NOTES.read_text())
+            except Exception:
+                self.data = {}
+
+    def _save(self):
+        NOTES.write_text(json.dumps(self.data, indent=2))
 
     @commands.command(name="note")
-    async def note(self, ctx, *, text: str = None):
+    async def note(self, ctx, key: str = None, *, value: str = None):
         await ctx.message.delete()
-        data = load()
-        uid = str(ctx.author.id)
-        if text is None:
-            await ctx.send(data.get(uid, "no note"), delete_after=10)
+        if key is None:
+            keys = list(self.data.keys())[:40]
+            await ctx.send("notes: " + (", ".join(keys) or "none"), delete_after=10)
             return
-        data[uid] = text
-        save(data)
-        await ctx.send("note saved", delete_after=3)
+        if value is None:
+            await ctx.send(self.data.get(key, "not found")[:1900], delete_after=12)
+            return
+        self.data[key] = value
+        self._save()
+        await ctx.send(f"saved `{key}`", delete_after=3)
 
     @commands.command(name="clearnote")
-    async def clearnote(self, ctx):
+    async def clearnote(self, ctx, key: str):
         await ctx.message.delete()
-        data = load()
-        data.pop(str(ctx.author.id), None)
-        save(data)
-        await ctx.send("note cleared", delete_after=3)
+        if key in self.data:
+            del self.data[key]
+            self._save()
+            await ctx.send(f"cleared `{key}`", delete_after=3)
+        else:
+            await ctx.send("missing", delete_after=3)
 
 async def setup(bot):
     await bot.add_cog(Note(bot))
