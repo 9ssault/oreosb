@@ -1,77 +1,90 @@
+from datetime import datetime, timezone
 import discord
 from discord.ext import commands
-from collections import defaultdict, deque
-from datetime import datetime, timezone
 
 class Snipe(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.deleted = defaultdict(lambda: deque(maxlen=10))
-        self.edited = defaultdict(lambda: deque(maxlen=10))
+        self.deleted = {}
+        self.edited = {}
+        self.cache = {}
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author.bot or message.author.id == self.bot.user.id:
+            return
+        ch = self.cache.setdefault(message.channel.id, {})
+        if len(ch) > 80:
+            ch.pop(next(iter(ch)), None)
+        ch[message.id] = {
+            "content": message.content or "",
+            "author": str(message.author),
+            "author_id": str(message.author.id),
+            "attachments": [a.url for a in message.attachments],
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
-        if not message or message.author.bot:
+        if not message or message.author.id == self.bot.user.id:
             return
-        if not message.content and not message.attachments:
-            return
-        self.deleted[message.channel.id].appendleft({
-            "author": str(message.author),
-            "author_id": message.author.id,
-            "content": (message.content or "")[:1500],
-            "time": datetime.now(timezone.utc).isoformat(),
-            "attachments": [a.url for a in message.attachments],
-        })
+        data = None
+        ch_cache = self.cache.get(message.channel.id, {})
+        data = ch_cache.pop(message.id, None)
+        if not data:
+            data = {
+                "content": message.content or "[no content]",
+                "author": str(message.author),
+                "author_id": str(message.author.id),
+                "attachments": [a.url for a in message.attachments],
+                "ts": datetime.now(timezone.utc).isoformat(),
+            }
+        self.deleted[message.channel.id] = data
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
-        if before.author.bot or before.content == after.content:
+        if before.author.id == self.bot.user.id or before.content == after.content:
             return
-        self.edited[before.channel.id].appendleft({
+        self.edited[before.channel.id] = {
             "author": str(before.author),
-            "before": (before.content or "")[:800],
-            "after": (after.content or "")[:800],
-            "time": datetime.now(timezone.utc).isoformat(),
-        })
+            "author_id": str(before.author.id),
+            "old": before.content or "",
+            "new": after.content or "",
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
 
     @commands.command(name="snipe")
-    async def snipe(self, ctx, index: int = 1):
+    async def snipe(self, ctx, channel_id: int = None):
         await ctx.message.delete()
-        q = self.deleted.get(ctx.channel.id)
-        if not q:
-            await ctx.send("nothing to snipe", delete_after=3)
+        cid = channel_id or ctx.channel.id
+        d = self.deleted.get(cid)
+        if not d:
+            await ctx.send("no snipe", delete_after=4)
             return
-        index = max(1, min(index, len(q)))
-        data = q[index - 1]
-        att = "\n".join(data["attachments"]) if data["attachments"] else ""
+        att = ("\n" + ", ".join(d["attachments"])) if d.get("attachments") else ""
         await ctx.send(
-            f"**{data['author']}** deleted ({index}/{len(q)}):\n{data['content']}\n{att}",
-            delete_after=18,
+            f"**{d['author']}** (`{d['author_id']}`)\n{d['content'][:1500]}{att}",
+            delete_after=20,
         )
 
     @commands.command(name="editsnipe")
-    async def editsnipe(self, ctx, index: int = 1):
+    async def editsnipe(self, ctx):
         await ctx.message.delete()
-        q = self.edited.get(ctx.channel.id)
-        if not q:
-            await ctx.send("nothing edited", delete_after=3)
+        d = self.edited.get(ctx.channel.id)
+        if not d:
+            await ctx.send("no edit snipe", delete_after=4)
             return
-        index = max(1, min(index, len(q)))
-        data = q[index - 1]
         await ctx.send(
-            f"**{data['author']}** edited ({index}/{len(q)}):\n- {data['before']}\n+ {data['after']}",
-            delete_after=18,
+            f"**{d['author']}**\nold: {d['old'][:700]}\nnew: {d['new'][:700]}",
+            delete_after=20,
         )
 
-    @commands.command(name="snipeall")
-    async def snipeall(self, ctx):
+    @commands.command(name="clearsnipes")
+    async def clearsnipes(self, ctx):
         await ctx.message.delete()
-        q = self.deleted.get(ctx.channel.id)
-        if not q:
-            await ctx.send("empty", delete_after=3)
-            return
-        lines = [f"`{i+1}` **{d['author']}**: {(d['content'] or '')[:80]}" for i, d in enumerate(q)]
-        await ctx.send("\n".join(lines)[:1900], delete_after=20)
+        self.deleted.clear()
+        self.edited.clear()
+        await ctx.send("snipes cleared", delete_after=3)
 
 async def setup(bot):
     await bot.add_cog(Snipe(bot))
