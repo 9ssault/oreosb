@@ -1,8 +1,6 @@
-# cogs/manager.py
 import asyncio
+import base64
 import aiohttp
-import json
-import os
 from pathlib import Path
 import discord
 from discord.ext import commands
@@ -12,13 +10,15 @@ API = "https://discord.com/api/v10"
 class Manager(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.workers = {}
 
     def _load_tokens(self):
         p = Path("tokens.txt")
         if not p.exists():
             return []
         return [l.strip() for l in p.read_text().splitlines() if l.strip()]
+
+    def _save_tokens(self, toks):
+        Path("tokens.txt").write_text("\n".join(toks) + ("\n" if toks else ""))
 
     async def _headers(self, token):
         return {
@@ -42,7 +42,7 @@ class Manager(commands.Cog):
         await ctx.message.delete()
         toks = self._load_tokens()
         if not toks:
-            await ctx.send("tokens.txt empty", delete_after=4)
+            await ctx.send("tokens.txt empty — use `.addtoken`", delete_after=4)
             return
         lines = []
         for i, t in enumerate(toks[:40]):
@@ -50,27 +50,49 @@ class Manager(commands.Cog):
                 async with s.get(f"{API}/users/@me", headers=await self._headers(t)) as r:
                     if r.status == 200:
                         d = await r.json()
-                        lines.append(f"`{i}` {d.get('username')} ({d.get('id')})")
+                        nitro = "N" if d.get("premium_type") else "-"
+                        lines.append(f"`{i}` {d.get('username')} [{nitro}] `{t[:12]}...`")
                     else:
-                        lines.append(f"`{i}` dead")
+                        lines.append(f"`{i}` dead `{t[:12]}...`")
             await asyncio.sleep(0.35)
         await ctx.send("**tokens**\n" + "\n".join(lines), delete_after=25)
+
+    @commands.command(name="addtoken")
+    async def addtoken(self, ctx, token: str):
+        await ctx.message.delete()
+        token = token.strip()
+        async with aiohttp.ClientSession() as s:
+            async with s.get(f"{API}/users/@me", headers=await self._headers(token)) as r:
+                if r.status != 200:
+                    await ctx.send("invalid token", delete_after=4)
+                    return
+                d = await r.json()
+        toks = self._load_tokens()
+        if token not in toks:
+            toks.append(token)
+            self._save_tokens(toks)
+        await ctx.send(f"added **{d.get('username')}** — total {len(toks)}", delete_after=6)
+
+    @commands.command(name="rmtoken")
+    async def rmtoken(self, ctx, partial: str):
+        await ctx.message.delete()
+        toks = self._load_tokens()
+        new = [t for t in toks if partial not in t]
+        self._save_tokens(new)
+        await ctx.send(f"removed — left {len(new)}", delete_after=4)
 
     @commands.command(name="setallpfp")
     async def setallpfp(self, ctx, url: str):
         await ctx.message.delete()
         toks = self._load_tokens()
-        ok = 0
         async with aiohttp.ClientSession() as s:
             async with s.get(url) as r:
                 raw = await r.read()
-                mime = r.content_type
-        import base64
-        b64 = base64.b64encode(raw).decode()
-        data = f"data:{mime};base64,{b64}"
+                mime = r.content_type or "image/png"
+        data = f"data:{mime};base64,{base64.b64encode(raw).decode()}"
+        ok = 0
         for t in toks:
-            st = await self._patch_me(t, {"avatar": data})
-            if st == 200:
+            if await self._patch_me(t, {"avatar": data}) == 200:
                 ok += 1
             await asyncio.sleep(1.2)
         await ctx.send(f"setallpfp {ok}/{len(toks)}", delete_after=6)
@@ -81,8 +103,7 @@ class Manager(commands.Cog):
         toks = self._load_tokens()
         ok = 0
         for t in toks:
-            st = await self._patch_profile(t, {"bio": bio})
-            if st in (200, 204):
+            if await self._patch_profile(t, {"bio": bio[:190]}) in (200, 204):
                 ok += 1
             await asyncio.sleep(1.0)
         await ctx.send(f"setallbio {ok}/{len(toks)}", delete_after=6)
@@ -96,7 +117,11 @@ class Manager(commands.Cog):
         ok = 0
         for t in toks:
             async with aiohttp.ClientSession() as s:
-                async with s.patch(f"{API}/users/@me/settings", headers=await self._headers(t), json={"status": st}) as r:
+                async with s.patch(
+                    f"{API}/users/@me/settings",
+                    headers=await self._headers(t),
+                    json={"status": st},
+                ) as r:
                     if r.status in (200, 204):
                         ok += 1
             await asyncio.sleep(0.8)
@@ -109,8 +134,12 @@ class Manager(commands.Cog):
         ok = 0
         for t in toks:
             async with aiohttp.ClientSession() as s:
-                payload = {"custom_status": None, "activities": [{"type": 0, "name": game}]}
-                async with s.patch(f"{API}/users/@me/settings", headers=await self._headers(t), json=payload) as r:
+                payload = {"activities": [{"type": 0, "name": game[:128]}]}
+                async with s.patch(
+                    f"{API}/users/@me/settings",
+                    headers=await self._headers(t),
+                    json=payload,
+                ) as r:
                     if r.status in (200, 204):
                         ok += 1
             await asyncio.sleep(0.9)
@@ -123,7 +152,10 @@ class Manager(commands.Cog):
         ok = 0
         for t in toks:
             async with aiohttp.ClientSession() as s:
-                async with s.delete(f"{API}/users/@me/guilds/{guild_id}", headers=await self._headers(t)) as r:
+                async with s.delete(
+                    f"{API}/users/@me/guilds/{guild_id}",
+                    headers=await self._headers(t),
+                ) as r:
                     if r.status in (204, 200):
                         ok += 1
             await asyncio.sleep(0.7)
@@ -137,7 +169,11 @@ class Manager(commands.Cog):
         ok = 0
         for t in toks:
             async with aiohttp.ClientSession() as s:
-                async with s.post(f"{API}/invites/{code}", headers=await self._headers(t), json={}) as r:
+                async with s.post(
+                    f"{API}/invites/{code}",
+                    headers=await self._headers(t),
+                    json={},
+                ) as r:
                     if r.status in (200, 204):
                         ok += 1
             await asyncio.sleep(1.5)
