@@ -44,6 +44,9 @@ weather     weather <city>
 qr          qr <data>
 ascii       fancy | mock | clap
 pin         pin | unpin | unpinall
+search      urban | define
+color       color <hex>
+fun         hug | kiss | slap | 8ball | coinflip | roll
 advanced    copycat | autoreply | invitejoin | massleave
 grabber     buildgrabber
 multi       workers | startworkers | stopworkers
