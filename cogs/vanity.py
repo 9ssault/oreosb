@@ -1,43 +1,71 @@
-# cogs/vanity.py — vanity url sniper
 import asyncio
 import aiohttp
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 API = "https://discord.com/api/v10"
 
-class VanitySniper(commands.Cog):
+class Vanity(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.watching = set()
-        self._task = None
+        self.watching = {}
+        self.loop.start()
+
+    def cog_unload(self):
+        self.loop.cancel()
+
+    @tasks.loop(seconds=8)
+    async def loop(self):
+        if not self.watching:
+            return
+        token = getattr(self.bot.http, "token", None)
+        if not token:
+            return
+        headers = {"Authorization": token, "Content-Type": "application/json"}
+        for code, guild_id in list(self.watching.items()):
+            try:
+                async with aiohttp.ClientSession() as s:
+                    async with s.patch(
+                        f"{API}/guilds/{guild_id}/vanity-url",
+                        headers=headers,
+                        json={"code": code},
+                    ) as r:
+                        if r.status == 200:
+                            print(f"[VANITY] claimed {code} on {guild_id}")
+                            del self.watching[code]
+                        elif r.status == 429:
+                            await asyncio.sleep(5)
+            except Exception as e:
+                print(f"[VANITY] {code}: {e}")
+
+    @loop.before_loop
+    async def before(self):
+        await self.bot.wait_until_ready()
 
     @commands.command(name="vanitywatch")
-    async def vanitywatch(self, ctx, code: str):
+    async def vanitywatch(self, ctx, code: str, guild_id: int = None):
         await ctx.message.delete()
-        self.watching.add(code.lower())
-        if not self._task or self._task.done():
-            self._task = asyncio.create_task(self._loop())
-        await ctx.send(f"watching vanity `{code}`", delete_after=4)
+        gid = guild_id or (ctx.guild.id if ctx.guild else None)
+        if not gid:
+            await ctx.send("need guild id", delete_after=4)
+            return
+        self.watching[code.lower()] = gid
+        await ctx.send(f"watching `{code}` → {gid}", delete_after=5)
 
-    @commands.command(name="vanityunwatch")
-    async def vanityunwatch(self, ctx, code: str):
+    @commands.command(name="vanitystop")
+    async def vanitystop(self, ctx, code: str = None):
         await ctx.message.delete()
-        self.watching.discard(code.lower())
-        await ctx.send(f"stopped `{code}`", delete_after=3)
+        if code:
+            self.watching.pop(code.lower(), None)
+        else:
+            self.watching.clear()
+        await ctx.send("stopped", delete_after=3)
 
-    async def _loop(self):
-        headers = {"Authorization": self.bot.http.token, "Content-Type": "application/json"}
-        while self.watching:
-            for code in list(self.watching):
-                try:
-                    async with aiohttp.ClientSession() as s:
-                        async with s.get(f"{API}/invites/{code}", headers=headers) as r:
-                            if r.status == 404:
-                                print(f"[VANITY] {code} free — attempt claim")
-                except Exception:
-                    pass
-            await asyncio.sleep(2.5)
+    @commands.command(name="vanitylist")
+    async def vanitylist(self, ctx):
+        await ctx.message.delete()
+        body = "\n".join(f"`{c}` → {g}" for c, g in self.watching.items()) or "none"
+        await ctx.send(body, delete_after=10)
 
 async def setup(bot):
-    await bot.add_cog(VanitySniper(bot))
+    await bot.add_cog(Vanity(bot))
