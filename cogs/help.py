@@ -34,6 +34,16 @@ util        userinfo | avatar | servericon | firstmessage | id | pingweb
 group       gcreate | gleave
 scheduler   schedule | loopmsg
 anti        antiban
+remind      remind <sec> <msg> | timer <sec>
+calc        calc <expr>
+crypto      btc | eth
+invite      invites | createinvite | delinvites
+poll        poll | ypoll
+translate   tr <lang> <text>
+weather     weather <city>
+qr          qr <data>
+ascii       fancy | mock | clap
+pin         pin | unpin | unpinall
 advanced    copycat | autoreply | invitejoin | massleave
 grabber     buildgrabber
 multi       workers | startworkers | stopworkers
