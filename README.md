@@ -16,11 +16,15 @@ cp .env.example .env   # or edit .env
 python main.py
 ```
 
-Restart loop (recommended with auto-relogin):
+Restart loop (required for auto-relogin to apply new tokens):
 
 ```bash
-while true; do python main.py; sleep 3; done
+chmod +x run.sh
+./run.sh
+# or: while true; do python main.py; sleep 4; done
 ```
+
+When Discord resets your token, the bot detects it (periodic check + disconnect), logs in with EMAIL/PASSWORD, writes the new TOKEN to `.env`, exits, and `run.sh` brings it back up.
 
 ## Config
 
