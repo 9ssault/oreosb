@@ -1,0 +1,5 @@
+{
+  "name": "OreoSB Control Center",
+  "description": "Advanced Discord Selfbot & Multi-Token Utility Toolkit with Auto-Relogin, IMAP Recovery, Snipers, and 60+ Modular Cogs",
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
