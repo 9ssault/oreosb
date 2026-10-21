@@ -153,22 +153,20 @@ def render_page(page: int) -> str:
     total = len(PAGES)
     page = max(1, min(int(page), total))
     title, rows = PAGES[page - 1]
-    esc = "\x1b"
+    ESC = "\x1b"
     out = []
     out.append(">")
     out.append(">")
-    out.append(f"> ```ansi")
-    out.append(f"> {esc}[33m{title}{esc}[0m")
-    out.append(f"> ```")
-    out.append(f"> ```ansi")
+    out.append(f"> *```*ansi")
+    out.append(f"> {ESC}[33m{title}{ESC}[0m")
+    out.append(f"> ``````ansi")
     for cmd, desc in rows:
         out.append(
-            f"> {esc}[0;37m{cmd:<12} {esc}[30m| {esc}[0;34m{desc}{esc}[0m"
+            f"> {ESC}[0;37m{cmd:<12} {ESC}[30m| {ESC}[0;34m{desc}{ESC}[0m"
         )
-    out.append(f"> ```")
-    out.append(f"> ```ansi")
-    out.append(f"> {esc}[0;37mPage  {esc}[30m| {esc}[0;34m{page}/{total}{esc}[0m")
-    out.append(f"> ```")
+    out.append(f"> ``````ansi")
+    out.append(f"> {ESC}[0;37mPage  {ESC}[30m| {ESC}[0;34m{page}/{total}{ESC}[0m")
+    out.append(f"> *```*")
     out.append(">")
     nxt = page + 1 if page < total else 1
     out.append(f"> `.help {nxt}` next")
