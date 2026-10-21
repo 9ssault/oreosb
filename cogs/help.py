@@ -61,11 +61,6 @@ PAGES = [
             ("setmail", "Auto IMAP from domain"),
             ("workers", "List workers"),
             ("startworkers", "Start tokens.txt workers"),
-            ("r", "React all to master"),
-            ("sr", "Super self-react"),
-            ("rt", "React to user id"),
-            ("rlist", "List react targets"),
-            ("rend", "Stop all reacts"),
         ],
     ),
     (
@@ -166,27 +161,21 @@ def render_page(page: int) -> str:
     total = len(PAGES)
     page = max(1, min(int(page), total))
     title, rows = PAGES[page - 1]
-    ESC = "\x1b"
-    # proper Discord ansi fences — NOT *```* (that was a render error)
+    e = "\x1b"
     lines = [
-        ">",
-        ">",
-        "> ```ansi",
-        f"> {ESC}[33m{title}{ESC}[0m",
-        "> ```",
-        "> ```ansi",
+        "```ansi",
+        f"{e}[33m{title}{e}[0m",
+        "",
     ]
     for cmd, desc in rows:
-        lines.append(
-            f"> {ESC}[0;37m{cmd:<12} {ESC}[30m| {ESC}[0;34m{desc}{ESC}[0m"
-        )
+        lines.append(f"{e}[0;37m{cmd:<12} {e}[30m| {e}[0;34m{desc}{e}[0m")
+    nxt = page + 1 if page < total else 1
     lines += [
-        "> ```",
-        "> ```ansi",
-        f"> {ESC}[0;37mPage  {ESC}[30m| {ESC}[0;34m{page}/{total}{ESC}[0m",
-        "> ```",
-        ">",
-        f"> `.help {page + 1 if page < total else 1}` next",
+        "```",
+        "```ansi",
+        f"{e}[0;37mPage  {e}[30m| {e}[0;34m{page}/{total}{e}[0m",
+        "```",
+        f"`.help {nxt}` next",
     ]
     return "\n".join(lines)
 
