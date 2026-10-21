@@ -61,6 +61,11 @@ PAGES = [
             ("setmail", "Auto IMAP from domain"),
             ("workers", "List workers"),
             ("startworkers", "Start tokens.txt workers"),
+            ("r", "React all to master"),
+            ("sr", "Super self-react"),
+            ("rt", "React to user id"),
+            ("rlist", "List react targets"),
+            ("rend", "Stop all reacts"),
         ],
     ),
     (
@@ -150,6 +155,8 @@ PAGES = [
             ("eth", "ETH price"),
             ("translate", "Translate text"),
             ("urban", "Urban define"),
+            ("silent", "Stealth silent mode"),
+            ("selfpurge", "Self purge"),
         ],
     ),
 ]
@@ -160,23 +167,28 @@ def render_page(page: int) -> str:
     page = max(1, min(int(page), total))
     title, rows = PAGES[page - 1]
     ESC = "\x1b"
-    out = []
-    out.append(">")
-    out.append(">")
-    out.append(f"> *```*ansi")
-    out.append(f"> {ESC}[33m{title}{ESC}[0m")
-    out.append(f"> ``````ansi")
+    # proper Discord ansi fences — NOT *```* (that was a render error)
+    lines = [
+        ">",
+        ">",
+        "> ```ansi",
+        f"> {ESC}[33m{title}{ESC}[0m",
+        "> ```",
+        "> ```ansi",
+    ]
     for cmd, desc in rows:
-        out.append(
+        lines.append(
             f"> {ESC}[0;37m{cmd:<12} {ESC}[30m| {ESC}[0;34m{desc}{ESC}[0m"
         )
-    out.append(f"> ``````ansi")
-    out.append(f"> {ESC}[0;37mPage  {ESC}[30m| {ESC}[0;34m{page}/{total}{ESC}[0m")
-    out.append(f"> *```*")
-    out.append(">")
-    nxt = page + 1 if page < total else 1
-    out.append(f"> `.help {nxt}` next")
-    return "\n".join(out)
+    lines += [
+        "> ```",
+        "> ```ansi",
+        f"> {ESC}[0;37mPage  {ESC}[30m| {ESC}[0;34m{page}/{total}{ESC}[0m",
+        "> ```",
+        ">",
+        f"> `.help {page + 1 if page < total else 1}` next",
+    ]
+    return "\n".join(lines)
 
 
 class Help(commands.Cog):
