@@ -328,15 +328,24 @@ class Export(commands.Cog):
                     for fn in files:
                         fp = Path(root) / fn
                         z.write(fp, fp.relative_to(out))
-            await status.edit(
-                content=(
-                    f"fullexport done → `{zpath}`\\n"
-                    f"guilds={stats['guilds']} dms={stats['dms']} "
-                    f"channels={stats['channels']} msgs={stats['messages']}"
-                )
+            summary = (
+                f"fullexport done — guilds={stats['guilds']} dms={stats['dms']} "
+                f"channels={stats['channels']} msgs={stats['messages']}"
             )
+            try:
+                await status.delete()
+            except Exception:
+                pass
+            size = zpath.stat().st_size
+            if size < 24 * 1024 * 1024:
+                await ctx.send(summary, file=discord.File(str(zpath)))
+            else:
+                await ctx.send(f"{summary}\nzip too large ({size // 1024 // 1024} MB) saved `{zpath}`")
         except Exception as e:
-            await status.edit(content=f"fullexport fail: {e}")
+            try:
+                await status.edit(content=f"fullexport fail: {e}")
+            except Exception:
+                await ctx.send(f"fullexport fail: {e}", delete_after=10)
 
 
 

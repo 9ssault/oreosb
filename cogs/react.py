@@ -26,9 +26,28 @@ class React(commands.Cog):
         except Exception:
             pass
         if self.bot.user:
-            self.master_id = self.bot.user.id
-            return self.master_id
+            return self.bot.user.id
         return None
+
+    def _is_master_process(self):
+        return getattr(self.bot, "role", "master") == "master"
+
+    def _apply_target(self, uid: int, emoji: str = None):
+        if emoji is None:
+            self.targets.pop(uid, None)
+        else:
+            self.targets[uid] = emoji
+
+    def _broadcast_to_workers(self, uid: int, emoji: str = None):
+        """Push target onto all worker bots' React cogs."""
+        workers = getattr(self.bot, "workers", None) or {}
+        for w in workers.values():
+            wbot = w.get("bot")
+            if not wbot:
+                continue
+            cog = wbot.get_cog("React")
+            if cog:
+                cog._apply_target(uid, emoji)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -40,7 +59,6 @@ class React(commands.Cog):
             return
         uid = message.author.id
 
-        # per-user target reacts (including master via .r)
         emoji = self.targets.get(uid)
         if emoji:
             try:
@@ -48,7 +66,6 @@ class React(commands.Cog):
             except Exception:
                 pass
 
-        # super self-react on own messages
         if self.self_emoji and self.bot.user and uid == self.bot.user.id:
             await asyncio.sleep(0.28)
             try:
@@ -56,7 +73,6 @@ class React(commands.Cog):
             except Exception:
                 pass
 
-        # channel autoreact (others only)
         if self.bot.user and uid != self.bot.user.id:
             ce = self.channel_auto.get(message.channel.id)
             if ce:
@@ -67,34 +83,63 @@ class React(commands.Cog):
 
     @commands.command(name="r", aliases=["reactall"])
     async def r(self, ctx, emoji: str = None):
-        """all accounts react to master messages with emoji (or clear)."""
+        """
+        Master: set emoji so ALL workers + master react to master's messages.
+        Worker: only this account reacts to its own messages.
+        Clear: .r with no emoji.
+        """
         await ctx.message.delete()
+        me = self.bot.user.id if self.bot.user else None
         mid = self._master()
+        is_master = self._is_master_process() and me and mid and me == mid
+
         if not emoji:
-            if mid and mid in self.targets:
-                self.targets.pop(mid, None)
-            await ctx.send("master reaction cleared", delete_after=4)
+            if is_master:
+                if mid:
+                    self._apply_target(mid, None)
+                    self._broadcast_to_workers(mid, None)
+                await ctx.send("fleet master reaction cleared", delete_after=4)
+            else:
+                if me:
+                    self._apply_target(me, None)
+                await ctx.send("self reaction cleared", delete_after=3)
             return
-        if not mid:
-            await ctx.send("master not ready", delete_after=3)
-            return
-        self.targets[mid] = emoji
-        await ctx.send(f"all → master  {emoji}", delete_after=4)
+
+        if is_master:
+            # fleet: everyone reacts when master speaks
+            self._apply_target(mid, emoji)
+            self._broadcast_to_workers(mid, emoji)
+            n = len(getattr(self.bot, "workers", {}) or {})
+            await ctx.send(f"fleet → master {emoji} ({n} workers)", delete_after=5)
+        else:
+            # worker: only react to own messages
+            if not me:
+                return
+            self._apply_target(me, emoji)
+            await ctx.send(f"self → {emoji}", delete_after=4)
 
     @commands.command(name="sr", aliases=["superselfreact"])
     async def sr(self, ctx, emoji: str = None):
-        """super react on own messages."""
         await ctx.message.delete()
         if not emoji:
             self.self_emoji = None
+            if self._is_master_process():
+                for w in (getattr(self.bot, "workers", {}) or {}).values():
+                    cog = (w.get("bot") or None) and w["bot"].get_cog("React")
+                    if cog:
+                        cog.self_emoji = None
             await ctx.send("super self cleared", delete_after=3)
             return
         self.self_emoji = emoji
-        await ctx.send(f"super self  →  {emoji}", delete_after=4)
+        if self._is_master_process():
+            for w in (getattr(self.bot, "workers", {}) or {}).values():
+                cog = (w.get("bot") or None) and w["bot"].get_cog("React")
+                if cog:
+                    cog.self_emoji = emoji
+        await ctx.send(f"super self → {emoji}", delete_after=4)
 
     @commands.command(name="rt", aliases=["sreact"])
     async def rt(self, ctx, target_id: str = None, emoji: str = None):
-        """react to messages from user id."""
         await ctx.message.delete()
         if not target_id or not emoji:
             await ctx.send("rt <id> <emoji>", delete_after=4)
@@ -103,8 +148,10 @@ class React(commands.Cog):
         if not uid:
             await ctx.send("bad id", delete_after=3)
             return
-        self.targets[uid] = emoji
-        await ctx.send(f"{uid}  →  {emoji}", delete_after=4)
+        self._apply_target(uid, emoji)
+        if self._is_master_process():
+            self._broadcast_to_workers(uid, emoji)
+        await ctx.send(f"{uid} → {emoji}", delete_after=4)
 
     @commands.command(name="rtclear")
     async def rtclear(self, ctx, target_id: str = None):
@@ -113,19 +160,21 @@ class React(commands.Cog):
             await ctx.send("rtclear <id>", delete_after=3)
             return
         uid = int("".join(c for c in target_id if c.isdigit()) or 0)
-        self.targets.pop(uid, None)
-        await ctx.send(f"cleared  {uid}", delete_after=3)
+        self._apply_target(uid, None)
+        if self._is_master_process():
+            self._broadcast_to_workers(uid, None)
+        await ctx.send(f"cleared {uid}", delete_after=3)
 
     @commands.command(name="rlist")
     async def rlist(self, ctx):
         await ctx.message.delete()
         lines = []
         if self.self_emoji:
-            lines.append(f"super self  {self.self_emoji}")
+            lines.append(f"super self {self.self_emoji}")
         mid = self._master()
         for uid, emoji in self.targets.items():
-            label = "master  " if uid == mid else ""
-            lines.append(f"{label}{uid}  {emoji}")
+            label = "master " if uid == mid else ""
+            lines.append(f"{label}{uid} {emoji}")
         await ctx.send("\n".join(lines) if lines else "empty", delete_after=12)
 
     @commands.command(name="rend")
@@ -133,6 +182,12 @@ class React(commands.Cog):
         await ctx.message.delete()
         self.targets.clear()
         self.self_emoji = None
+        if self._is_master_process():
+            for w in (getattr(self.bot, "workers", {}) or {}).values():
+                cog = (w.get("bot") or None) and w["bot"].get_cog("React")
+                if cog:
+                    cog.targets.clear()
+                    cog.self_emoji = None
         await ctx.send("all reactions stopped", delete_after=3)
 
     @commands.command(name="autoreact")
