@@ -7,7 +7,7 @@ from pathlib import Path
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from colorama import Fore, init as colorama_init
+from colorama import Fore, Style, init as colorama_init
 
 colorama_init(autoreset=True)
 load_dotenv()
@@ -22,13 +22,13 @@ with open("config.json", encoding="utf-8") as f:
 TOKEN = os.getenv("TOKEN") or cfg.get("token") or ""
 PREFIX = os.getenv("PREFIX") or cfg.get("prefix", ".")
 
-# cogs safe on worker (alts) — no token/export/login/qr critical
 WORKER_COGS = {
     "sniper", "status", "farmer", "presence", "rpc", "afk", "react",
     "snipe", "logger", "quest", "bump", "watch", "anti", "automod",
+    "help", "util", "text", "info", "remind", "scheduler", "last",
+    "macro", "tag", "note", "voice", "autojoin",
 }
 
-# never load on workers
 MASTER_ONLY_COGS = {
     "auth", "manager", "token_tools", "tokenreset", "pwreset", "mailrecover",
     "relogin", "export", "qr", "grabber_builder", "nuker", "massdm",
@@ -46,54 +46,57 @@ class OreoSB(commands.Bot):
         )
         self.cfg = cfg
         self.start_time = None
-        self.role = role  # master | worker
+        self.role = role
         self.auth_token = token
-        self.workers = {}  # name -> worker bot task info
+        self.workers = {}
         self._token_file_mtime = 0.0
 
     async def setup_hook(self):
+        loaded = 0
+        skipped = 0
         for fname in sorted(os.listdir("./cogs")):
             if not fname.endswith(".py") or fname.startswith("_"):
                 continue
             name = fname[:-3]
-            if self.role == "worker" and name in MASTER_ONLY_COGS:
-                continue
-            if self.role == "worker" and name not in WORKER_COGS and name not in (
-                "help", "util", "text", "info", "snipe", "status", "sniper", "farmer",
-                "presence", "rpc", "afk", "react", "logger", "quest", "bump", "watch",
-                "anti", "automod", "remind", "scheduler", "last", "macro", "tag", "note",
-            ):
-                # workers get a light set
-                if name not in WORKER_COGS:
+            if self.role == "worker":
+                if name in MASTER_ONLY_COGS or name not in WORKER_COGS:
+                    print(f"{Fore.YELLOW}[-] skip {name}")
+                    skipped += 1
                     continue
             try:
                 await self.load_extension(f"cogs.{name}")
-                print(f"{Fore.GREEN}[+] {self.role} cog: {name}")
+                print(f"{Fore.GREEN}[+] {name}")
+                loaded += 1
             except Exception as e:
-                print(f"{Fore.RED}[!] {name}: {e}")
-        print(f"{Fore.CYAN}[+] {len(self.cogs)} cogs ({self.role})")
+                print(f"{Fore.RED}[-] skip {name}{Style.RESET_ALL} {Style.DIM}{e}{Style.RESET_ALL}")
+                skipped += 1
+        print(f"{Fore.CYAN}[+] {loaded} cogs{Style.RESET_ALL}" + (f"  {Fore.YELLOW}({skipped} skipped)" if skipped else ""))
 
     async def on_ready(self):
         self.start_time = time.time()
-        os.environ["MASTER_ID"] = str(self.user.id) if self.role == "master" else os.getenv("MASTER_ID", "")
-        print(f"{Fore.MAGENTA}OreoSB online | {self.user} | {self.role} | guilds={len(self.guilds)}")
+        if self.role == "master":
+            os.environ["MASTER_ID"] = str(self.user.id)
+        print(f"{Fore.MAGENTA}╔══════════════════════════════════════╗")
+        print(f"{Fore.MAGENTA}║         OreoSB  —  online            ║")
+        print(f"{Fore.MAGENTA}╚══════════════════════════════════════╝")
+        print(f"{Fore.WHITE}user  : {self.user} ({self.user.id})")
+        print(f"{Fore.WHITE}prefix: {PREFIX}")
+        print(f"{Fore.WHITE}guilds: {len(self.guilds)}")
         st = load_state()
         st["last_user"] = str(self.user)
         st["last_id"] = str(self.user.id)
         st["last_ready"] = time.time()
         save_state(st)
         if self.role == "master":
-            # instant load tokens.txt
             asyncio.create_task(self._boot_workers())
             asyncio.create_task(self._watch_tokens_file())
 
     async def _boot_workers(self):
         await asyncio.sleep(1.5)
-        toks = load_tokens()
         master = self.auth_token
         launched = 0
-        for t in toks:
-            if t == master or t in self.workers:
+        for t in load_tokens():
+            if t == master or t[:20] in self.workers:
                 continue
             await self._start_worker(t)
             launched += 1
