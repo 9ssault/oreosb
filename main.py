@@ -45,6 +45,7 @@ WORKER_COGS = {
     "snipe", "logger", "quest", "bump", "watch", "anti", "automod",
     "help", "util", "text", "info", "remind", "scheduler", "last",
     "macro", "tag", "note", "voice", "autojoin",
+    "clear", "purge", "purge_ext",  # workers can purge
 }
 
 MASTER_ONLY_COGS = {
