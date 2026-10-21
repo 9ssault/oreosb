@@ -24,6 +24,7 @@ snipe       snipe | editsnipe
 status      setstatus | setgame | setstream | rotatestatus
 presence    spotify | watching | competing | clearpresence
 rpc         rpc on|off|name|url|refresh
+platform    platform [desktop|web|android|ios|mobile|vr]
 webhook*    wspam | wdel
 account*    setbio | setpfp | leaveall | hypesquad
 nick        nick | massnick
