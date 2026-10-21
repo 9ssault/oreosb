@@ -1,45 +1,164 @@
 import asyncio
+import os
+
 import discord
 from discord.ext import commands
 
+
 class React(commands.Cog):
+    """JS-style fleet reacts: .r .sr .rt .rlist .rend + channel autoreact."""
+
     def __init__(self, bot):
         self.bot = bot
-        self.auto = {}
+        self.targets = {}  # user_id -> emoji
+        self.self_emoji = None
+        self.channel_auto = {}  # channel_id -> emoji
+        self.master_id = None
 
-    @commands.command(name="autoreact")
-    async def autoreact(self, ctx, emoji: str = None):
-        await ctx.message.delete()
-        if not emoji:
-            self.auto.pop(ctx.channel.id, None)
-            await ctx.send("autoreact off", delete_after=3)
-            return
-        self.auto[ctx.channel.id] = emoji
-        await ctx.send(f"autoreact {emoji}", delete_after=3)
+    def _master(self):
+        if self.master_id:
+            return self.master_id
+        try:
+            mid = int(os.getenv("MASTER_ID") or "0")
+            if mid:
+                self.master_id = mid
+                return mid
+        except Exception:
+            pass
+        if self.bot.user:
+            self.master_id = self.bot.user.id
+            return self.master_id
+        return None
 
     @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author == self.bot.user:
+    async def on_ready(self):
+        self._master()
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if not message.author:
             return
-        emoji = self.auto.get(message.channel.id)
+        uid = message.author.id
+
+        # per-user target reacts (including master via .r)
+        emoji = self.targets.get(uid)
         if emoji:
             try:
                 await message.add_reaction(emoji)
             except Exception:
                 pass
 
+        # super self-react on own messages
+        if self.self_emoji and self.bot.user and uid == self.bot.user.id:
+            await asyncio.sleep(0.28)
+            try:
+                await message.add_reaction(self.self_emoji)
+            except Exception:
+                pass
+
+        # channel autoreact (others only)
+        if self.bot.user and uid != self.bot.user.id:
+            ce = self.channel_auto.get(message.channel.id)
+            if ce:
+                try:
+                    await message.add_reaction(ce)
+                except Exception:
+                    pass
+
+    @commands.command(name="r", aliases=["reactall"])
+    async def r(self, ctx, emoji: str = None):
+        """all accounts react to master messages with emoji (or clear)."""
+        await ctx.message.delete()
+        mid = self._master()
+        if not emoji:
+            if mid and mid in self.targets:
+                self.targets.pop(mid, None)
+            await ctx.send("master reaction cleared", delete_after=4)
+            return
+        if not mid:
+            await ctx.send("master not ready", delete_after=3)
+            return
+        self.targets[mid] = emoji
+        await ctx.send(f"all → master  {emoji}", delete_after=4)
+
+    @commands.command(name="sr", aliases=["superselfreact"])
+    async def sr(self, ctx, emoji: str = None):
+        """super react on own messages."""
+        await ctx.message.delete()
+        if not emoji:
+            self.self_emoji = None
+            await ctx.send("super self cleared", delete_after=3)
+            return
+        self.self_emoji = emoji
+        await ctx.send(f"super self  →  {emoji}", delete_after=4)
+
+    @commands.command(name="rt", aliases=["sreact"])
+    async def rt(self, ctx, target_id: str = None, emoji: str = None):
+        """react to messages from user id."""
+        await ctx.message.delete()
+        if not target_id or not emoji:
+            await ctx.send("rt <id> <emoji>", delete_after=4)
+            return
+        uid = int("".join(c for c in target_id if c.isdigit()) or 0)
+        if not uid:
+            await ctx.send("bad id", delete_after=3)
+            return
+        self.targets[uid] = emoji
+        await ctx.send(f"{uid}  →  {emoji}", delete_after=4)
+
+    @commands.command(name="rtclear")
+    async def rtclear(self, ctx, target_id: str = None):
+        await ctx.message.delete()
+        if not target_id:
+            await ctx.send("rtclear <id>", delete_after=3)
+            return
+        uid = int("".join(c for c in target_id if c.isdigit()) or 0)
+        self.targets.pop(uid, None)
+        await ctx.send(f"cleared  {uid}", delete_after=3)
+
+    @commands.command(name="rlist")
+    async def rlist(self, ctx):
+        await ctx.message.delete()
+        lines = []
+        if self.self_emoji:
+            lines.append(f"super self  {self.self_emoji}")
+        mid = self._master()
+        for uid, emoji in self.targets.items():
+            label = "master  " if uid == mid else ""
+            lines.append(f"{label}{uid}  {emoji}")
+        await ctx.send("\n".join(lines) if lines else "empty", delete_after=12)
+
+    @commands.command(name="rend")
+    async def rend(self, ctx):
+        await ctx.message.delete()
+        self.targets.clear()
+        self.self_emoji = None
+        await ctx.send("all reactions stopped", delete_after=3)
+
+    @commands.command(name="autoreact")
+    async def autoreact(self, ctx, emoji: str = None):
+        await ctx.message.delete()
+        if not emoji:
+            self.channel_auto.pop(ctx.channel.id, None)
+            await ctx.send("autoreact off", delete_after=3)
+            return
+        self.channel_auto[ctx.channel.id] = emoji
+        await ctx.send(f"autoreact {emoji}", delete_after=3)
+
     @commands.command(name="massreact")
     async def massreact(self, ctx, emoji: str, limit: int = 20):
         await ctx.message.delete()
-        count = 0
+        limit = max(1, min(limit, 50))
+        n = 0
         async for m in ctx.channel.history(limit=limit):
             try:
                 await m.add_reaction(emoji)
-                count += 1
+                n += 1
             except Exception:
                 pass
             await asyncio.sleep(0.4)
-        await ctx.send(f"reacted {count}", delete_after=4)
+        await ctx.send(f"reacted {n}", delete_after=4)
+
 
 async def setup(bot):
     await bot.add_cog(React(bot))

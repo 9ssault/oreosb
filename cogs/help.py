@@ -106,6 +106,14 @@ PAGES = [
     (
         "Auto / Social",
         [
+            ("r", "React all to master emoji"),
+            ("sr", "Super self-react emoji"),
+            ("rt", "React to user id"),
+            ("rtclear", "Clear react target"),
+            ("rlist", "List react targets"),
+            ("rend", "Stop all reacts"),
+            ("autoreact", "Channel autoreact"),
+            ("massreact", "React last N msgs"),
             ("autojoin", "Save+join invite code"),
             ("joinall", "Join saved invites"),
             ("autoleave", "Mark guild autoleave"),
@@ -117,8 +125,6 @@ PAGES = [
             ("unwatch", "Stop watch"),
             ("kwadd", "Automod keyword"),
             ("friends", "List friends"),
-            ("addfriend", "Add friend"),
-            ("block", "Block user"),
             ("macro", "Save macro"),
             ("runmacro", "Run macro"),
         ],
