@@ -1,8 +1,4 @@
-import discord
 from discord.ext import commands
-
-# ANSI help pages (Discord ansi codeblock)
-# colors: 30 black | 31 red | 32 green | 33 yellow | 34 blue | 35 magenta | 36 cyan | 37 white
 
 PAGES = [
     (
@@ -16,7 +12,6 @@ PAGES = [
             ("export", "Export channel history"),
             ("exportdm", "Export a DM"),
             ("exportguild", "Export guild messages"),
-            ("firstmessage", "Jump to first message"),
             ("help", "This menu"),
             ("id", "Copy an ID"),
             ("last", "Last message from user"),
@@ -62,11 +57,8 @@ PAGES = [
             ("sessions", "List sessions"),
             ("checktokenlive", "Validate current token"),
             ("changepass", "Change password"),
-            ("autoreset", "Rotate password"),
-            ("forgotpass", "Trigger forgot email"),
             ("mailrecover", "IMAP auto recovery"),
             ("setmail", "Auto IMAP from domain"),
-            ("setimap", "Manual IMAP settings"),
             ("workers", "List workers"),
             ("startworkers", "Start tokens.txt workers"),
         ],
@@ -104,8 +96,6 @@ PAGES = [
             ("vcjoin", "Join voice"),
             ("vcleave", "Leave voice"),
             ("vcmove", "Move voice channel"),
-            ("vcmute", "Self mute"),
-            ("vcdeaf", "Self deaf"),
             ("vclist", "List voice channels"),
             ("quests", "List Discord quests"),
             ("qstart", "Run quest engine"),
@@ -126,8 +116,6 @@ PAGES = [
             ("watch", "Watch user presence"),
             ("unwatch", "Stop watch"),
             ("kwadd", "Automod keyword"),
-            ("kwdel", "Remove keyword"),
-            ("autoreact", "Auto react"),
             ("friends", "List friends"),
             ("addfriend", "Add friend"),
             ("block", "Block user"),
@@ -147,7 +135,6 @@ PAGES = [
             ("choose", "Choose options"),
             ("rate", "Rate something"),
             ("ship", "Ship two users"),
-            ("ascii", "ASCII text"),
             ("mock", "MoCk TeXt"),
             ("clap", "clap text"),
             ("poll", "Create poll"),
@@ -162,20 +149,29 @@ PAGES = [
 ]
 
 
-def _ansi_page(title: str, rows: list, page: int, total: int) -> str:
-    lines = ["```ansi", f"\u001b[33m{title}\u001b[0m", "```"]
-    body = ["```ansi"]
-    for cmd, desc in rows:
-        body.append(
-            f"\u001b[0;37m{cmd:<12} \u001b[30m| \u001b[0;34m{desc}\u001b[0m"
-        )
-    body.append("```")
-    foot = [
-        "```ansi",
-        f"\u001b[0;37mPage  \u001b[30m| \u001b[0;34m{page}/{total}\u001b[0m",
-        "```",
+def render_page(page: int) -> str:
+    total = len(PAGES)
+    page = max(1, min(page, total))
+    title, rows = PAGES[page - 1]
+    lines = [
+        ">",
+        ">",
+        f"> *```*ansi",
+        f"> \x1b[33m{title}\x1b[0m",
+        f"> ``````ansi",
     ]
-    return "\n".join(lines + body + foot)
+    for cmd, desc in rows:
+        lines.append(
+            f"> \x1b[0;37m{cmd:<12} \x1b[30m| \x1b[0;34m{desc}\x1b[0m"
+        )
+    lines += [
+        f"> ``````ansi",
+        f"> \x1b[0;37mPage  \x1b[30m| \x1b[0;34m{page}/{total}\x1b[0m",
+        f"> *```*",
+        ">",
+        f"> `.help {page + 1 if page < total else 1}` next",
+    ]
+    return "\n".join(lines)
 
 
 class Help(commands.Cog):
@@ -185,56 +181,7 @@ class Help(commands.Cog):
     @commands.command(name="help", aliases=["h", "commands"])
     async def help(self, ctx, page: int = 1):
         await ctx.message.delete()
-        total = len(PAGES)
-        page = max(1, min(page, total))
-        title, rows = PAGES[page - 1]
-        text = _ansi_page(title, rows, page, total)
-        msg = await ctx.send(text)
-
-        # simple reaction pager if we can add reactions
-        try:
-            await msg.add_reaction("⬅️")
-            await msg.add_reaction("➡️")
-        except Exception:
-            return
-
-        def check(reaction, user):
-            return (
-                user.id == ctx.author.id
-                and reaction.message.id == msg.id
-                and str(reaction.emoji) in ("⬅️", "➡️")
-            )
-
-        import asyncio
-
-        current = page
-        while True:
-            try:
-                reaction, user = await self.bot.wait_for(
-                    "reaction_add", timeout=60.0, check=check
-                )
-            except asyncio.TimeoutError:
-                break
-            try:
-                await msg.remove_reaction(reaction.emoji, user)
-            except Exception:
-                pass
-            if str(reaction.emoji) == "➡️":
-                current = current + 1 if current < total else 1
-            else:
-                current = current - 1 if current > 1 else total
-            title, rows = PAGES[current - 1]
-            try:
-                await msg.edit(content=_ansi_page(title, rows, current, total))
-            except Exception:
-                break
-
-    @commands.command(name="helplist")
-    async def helplist(self, ctx):
-        """Plain text fallback."""
-        await ctx.message.delete()
-        lines = [f"**{t}** — {len(r)} cmds" for t, r in PAGES]
-        await ctx.send("\n".join(lines) + f"\nuse `.help [1-{len(PAGES)}]`", delete_after=20)
+        await ctx.send(render_page(page))
 
 
 async def setup(bot):
