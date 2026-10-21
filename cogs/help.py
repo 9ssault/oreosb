@@ -18,7 +18,7 @@ mod         kick | ban | unban | timeout | lock | unlock | slowmode
 snipers     nitro/giveaway | vanitywatch
 nuke*       nuke | masschannel | massrole | banall | kickall
 dm*         massdm | dmfriends | stopdm | cleardm
-scrape      scrape | msgscrape | backup | clone
+scrape      scrape | msgscrape | ginfo | backup | clone
 spam        spam | ghostping | editloop | purge
 snipe       snipe | editsnipe
 status      setstatus | setgame | setstream | rotatestatus
@@ -29,7 +29,7 @@ account*    setbio | setpfp | leaveall | hypesquad
 nick        nick | massnick
 farm        owofarm | dankfarm | mee6farm | stopfarm
 voice       vcjoin | vcleave | vcmove | vcmute | vcdeaf | vclist | muteall
-autojoin*   autojoin | autojoinrm | joinall | autoleave | leaveguild | leaveall
+autojoin*   autojoin | autojoinrm | joinall | autoleave | leaveguild | leaveallguilds
 react       autoreact | massreact
 emoji       steal | emojistealall
 logger      log on|off

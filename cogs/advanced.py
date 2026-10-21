@@ -11,8 +11,8 @@ class Advanced(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="snipe")
-    async def snipe(self, ctx):
+    @commands.command(name="asnipe")
+    async def asnipe(self, ctx):
         """last deleted message in channel (simple cache)"""
         await ctx.message.delete()
         await ctx.send("snipe cache not persistent yet — enable on_message_delete for full", delete_after=4)

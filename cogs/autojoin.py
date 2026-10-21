@@ -108,9 +108,9 @@ class AutoJoin(commands.Cog):
             async with s.delete(f"{API}/users/@me/guilds/{gid}", headers=self._headers()) as r:
                 await ctx.send(f"leave {gid} → {r.status}", delete_after=5)
 
-    @commands.command(name="leaveall")
+    @commands.command(name="leaveallguilds")
     @owner_check()
-    async def leaveall(self, ctx, delay: float = 1.0):
+    async def leaveallguilds(self, ctx, delay: float = 1.0):
         await ctx.message.delete()
         ok = 0
         async with aiohttp.ClientSession() as s:

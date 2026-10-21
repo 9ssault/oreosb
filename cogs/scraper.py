@@ -57,8 +57,8 @@ class Scraper(commands.Cog):
             json.dump(msgs, f, indent=2)
         await ctx.send(f"scraped {len(msgs)} msgs", delete_after=3)
 
-    @commands.command(name="serverinfo")
-    async def serverinfo(self, ctx, guild_id: int = None):
+    @commands.command(name="ginfo")
+    async def ginfo(self, ctx, guild_id: int = None):
         await ctx.message.delete()
         g = self.bot.get_guild(guild_id or ctx.guild.id) if (guild_id or ctx.guild) else None
         if not g:
