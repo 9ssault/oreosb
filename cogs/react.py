@@ -6,12 +6,13 @@ from discord.ext import commands
 
 
 class React(commands.Cog):
-    """JS-style fleet reacts: .r .sr .rt .rlist .rend + channel autoreact."""
+    """JS-style fleet reacts: .r normal emoji, .sr nitro super reaction, .rt .rlist .rend + channel autoreact."""
 
     def __init__(self, bot):
         self.bot = bot
         self.targets = {}  # user_id -> emoji
         self.self_emoji = None
+        self.self_super = False
         self.channel_auto = {}  # channel_id -> emoji
         self.master_id = None
 
@@ -49,6 +50,30 @@ class React(commands.Cog):
             if cog:
                 cog._apply_target(uid, emoji)
 
+    async def _super_react(self, message: discord.Message, emoji: str):
+        """Nitro super reaction (burst) via Discord API type=1."""
+        # emoji can be unicode or custom name:id
+        if emoji.startswith("<") and emoji.endswith(">"):
+            # custom <:name:id> or <a:name:id>
+            parts = emoji.strip("<>").split(":")
+            if len(parts) >= 3:
+                emoji_path = f"{parts[1]}:{parts[2]}"
+            else:
+                emoji_path = emoji
+        else:
+            # unicode — URL-encode
+            emoji_path = discord.utils._uriquote(emoji)
+
+        route = discord.http.Route(
+            "PUT",
+            "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me",
+            channel_id=message.channel.id,
+            message_id=message.id,
+            emoji=emoji_path,
+        )
+        # type=1 = super/burst reaction (nitro perk)
+        await self.bot.http.request(route, params={"type": 1})
+
     @commands.Cog.listener()
     async def on_ready(self):
         self._master()
@@ -69,7 +94,10 @@ class React(commands.Cog):
         if self.self_emoji and self.bot.user and uid == self.bot.user.id:
             await asyncio.sleep(0.28)
             try:
-                await message.add_reaction(self.self_emoji)
+                if self.self_super:
+                    await self._super_react(message, self.self_emoji)
+                else:
+                    await message.add_reaction(self.self_emoji)
             except Exception:
                 pass
 
@@ -84,6 +112,7 @@ class React(commands.Cog):
     @commands.command(name="r", aliases=["reactall"])
     async def r(self, ctx, emoji: str = None):
         """
+        Normal emoji reaction.
         Master: set emoji so ALL workers + master react to master's messages.
         Worker: only this account reacts to its own messages.
         Clear: .r with no emoji.
@@ -118,25 +147,35 @@ class React(commands.Cog):
             self._apply_target(me, emoji)
             await ctx.send(f"self → {emoji}", delete_after=4)
 
-    @commands.command(name="sr", aliases=["superselfreact"])
+    @commands.command(name="sr", aliases=["superselfreact", "superreact"])
     async def sr(self, ctx, emoji: str = None):
+        """
+        Nitro super reaction (burst / superemoji).
+        Uses Discord reaction type=1 (requires Nitro).
+        Clear: .sr with no emoji.
+        """
         await ctx.message.delete()
         if not emoji:
             self.self_emoji = None
+            self.self_super = False
             if self._is_master_process():
                 for w in (getattr(self.bot, "workers", {}) or {}).values():
                     cog = (w.get("bot") or None) and w["bot"].get_cog("React")
                     if cog:
                         cog.self_emoji = None
-            await ctx.send("super self cleared", delete_after=3)
+                        cog.self_super = False
+            await ctx.send("super reaction cleared", delete_after=3)
             return
+
         self.self_emoji = emoji
+        self.self_super = True
         if self._is_master_process():
             for w in (getattr(self.bot, "workers", {}) or {}).values():
                 cog = (w.get("bot") or None) and w["bot"].get_cog("React")
                 if cog:
                     cog.self_emoji = emoji
-        await ctx.send(f"super self → {emoji}", delete_after=4)
+                    cog.self_super = True
+        await ctx.send(f"super → {emoji} (nitro burst)", delete_after=4)
 
     @commands.command(name="rt", aliases=["sreact"])
     async def rt(self, ctx, target_id: str = None, emoji: str = None):
@@ -170,7 +209,8 @@ class React(commands.Cog):
         await ctx.message.delete()
         lines = []
         if self.self_emoji:
-            lines.append(f"super self {self.self_emoji}")
+            kind = "super" if self.self_super else "normal"
+            lines.append(f"{kind} self {self.self_emoji}")
         mid = self._master()
         for uid, emoji in self.targets.items():
             label = "master " if uid == mid else ""
@@ -182,12 +222,14 @@ class React(commands.Cog):
         await ctx.message.delete()
         self.targets.clear()
         self.self_emoji = None
+        self.self_super = False
         if self._is_master_process():
             for w in (getattr(self.bot, "workers", {}) or {}).values():
                 cog = (w.get("bot") or None) and w["bot"].get_cog("React")
                 if cog:
                     cog.targets.clear()
                     cog.self_emoji = None
+                    cog.self_super = False
         await ctx.send("all reactions stopped", delete_after=3)
 
     @commands.command(name="autoreact")
