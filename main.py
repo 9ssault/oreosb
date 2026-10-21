@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -11,6 +12,13 @@ from colorama import Fore, Style, init as colorama_init
 
 colorama_init(autoreset=True)
 load_dotenv()
+
+# quiet discord.py — only our [+] / banner lines
+logging.getLogger("discord").setLevel(logging.CRITICAL)
+logging.getLogger("discord.http").setLevel(logging.CRITICAL)
+logging.getLogger("discord.gateway").setLevel(logging.CRITICAL)
+logging.getLogger("discord.client").setLevel(logging.CRITICAL)
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 from core_utils import load_tokens, save_state, load_state, DATA_DIR
 
