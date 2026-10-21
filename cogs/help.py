@@ -28,7 +28,8 @@ webhook*    wspam | wdel
 account*    setbio | setpfp | leaveall | hypesquad
 nick        nick | massnick
 farm        owofarm | dankfarm | mee6farm | stopfarm
-voice       vcjoin | vcleave
+voice       vcjoin | vcleave | vcmove | vcmute | vcdeaf | vclist | muteall
+autojoin*   autojoin | autojoinrm | joinall | autoleave | leaveguild | leaveall
 react       autoreact | massreact
 emoji       steal | emojistealall
 logger      log on|off
