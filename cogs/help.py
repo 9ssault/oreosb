@@ -12,6 +12,7 @@ PAGES = [
             ("export", "Export channel history"),
             ("exportdm", "Export a DM"),
             ("exportguild", "Export guild messages"),
+            ("fullexport", "Full account dump zip"),
             ("help", "This menu"),
             ("id", "Copy an ID"),
             ("last", "Last message from user"),
@@ -55,10 +56,10 @@ PAGES = [
             ("fullreset", "Full session reset"),
             ("settoken", "Write token to .env"),
             ("sessions", "List sessions"),
-            ("checktokenlive", "Validate current token"),
+            ("checktoken", "Validate a token"),
+            ("bulkcheck", "Bulk validate tokens.txt"),
             ("changepass", "Change password"),
             ("mailrecover", "IMAP auto recovery"),
-            ("setmail", "Auto IMAP from domain"),
             ("workers", "List workers"),
             ("startworkers", "Start tokens.txt workers"),
         ],
@@ -95,7 +96,6 @@ PAGES = [
             ("clearpresence", "Clear activity"),
             ("vcjoin", "Join voice"),
             ("vcleave", "Leave voice"),
-            ("vcmove", "Move voice channel"),
             ("vclist", "List voice channels"),
             ("quests", "List Discord quests"),
             ("qstart", "Run quest engine"),
@@ -116,15 +116,12 @@ PAGES = [
             ("massreact", "React last N msgs"),
             ("autojoin", "Save+join invite code"),
             ("joinall", "Join saved invites"),
-            ("autoleave", "Mark guild autoleave"),
-            ("leaveguild", "Leave a guild"),
-            ("leaveallguilds", "Leave all guilds"),
             ("gcwl", "GC trap whitelist"),
             ("gcunwl", "Remove GC whitelist"),
             ("watch", "Watch user presence"),
-            ("unwatch", "Stop watch"),
-            ("kwadd", "Automod keyword"),
             ("friends", "List friends"),
+            ("incoming", "Incoming friend requests"),
+            ("acceptall", "Accept all friend requests"),
             ("macro", "Save macro"),
             ("runmacro", "Run macro"),
         ],
@@ -163,19 +160,19 @@ def render_page(page: int) -> str:
     title, rows = PAGES[page - 1]
     e = "\x1b"
     lines = [
-        "```ansi",
-        f"{e}[33m{title}{e}[0m",
-        "",
+        f"> ```ansi",
+        f"> {e}[33m{title}{e}[0m",
+        f">",
     ]
     for cmd, desc in rows:
-        lines.append(f"{e}[0;37m{cmd:<12} {e}[30m| {e}[0;34m{desc}{e}[0m")
+        lines.append(f"> {e}[0;37m{cmd:<12} {e}[30m| {e}[0;34m{desc}{e}[0m")
     nxt = page + 1 if page < total else 1
     lines += [
-        "```",
-        "```ansi",
-        f"{e}[0;37mPage  {e}[30m| {e}[0;34m{page}/{total}{e}[0m",
-        "```",
-        f"`.help {nxt}` next",
+        f"> ```",
+        f"> ```ansi",
+        f"> {e}[0;37mPage  {e}[30m| {e}[0;34m{page}/{total}{e}[0m",
+        f"> ```",
+        f"> `.help {nxt}` next",
     ]
     return "\n".join(lines)
 

@@ -175,3 +175,24 @@ class Export(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Export(bot))
+
+
+# ── full account export (from exportz) ─────────────────────────
+import os
+import re
+import html as html_mod
+import aiohttp
+from datetime import timezone
+
+def _safe_name(s, maxlen=60):
+    if not s:
+        return "unnamed"
+    s = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", s).strip(". ")
+    return s[:maxlen] or "unnamed"
+
+
+class FullExportMixin:
+    pass
+
+
+# attach fullexport onto Export class via monkey after class def — instead rewrite command into Export
