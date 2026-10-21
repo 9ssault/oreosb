@@ -128,7 +128,7 @@ class OreoSB(commands.Bot):
 
         async def runner():
             try:
-                await wbot.start(token, log_handler=None)
+                await wbot.start(token)
             except Exception as e:
                 print(f"{Fore.RED}[worker] dead {key[:8]}: {e}")
                 self.failed_workers.add(key)
@@ -203,4 +203,4 @@ if __name__ == "__main__":
     if not TOKEN:
         print(f"{Fore.RED}[!] TOKEN missing — set in .env")
         raise SystemExit(1)
-    bot.run(TOKEN, log_handler=None)
+    bot.run(TOKEN)
