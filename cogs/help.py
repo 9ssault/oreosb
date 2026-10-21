@@ -2,6 +2,20 @@ from discord.ext import commands
 
 PAGES = [
     (
+        "Core",
+        [
+            ("ping", "Latency check"),
+            ("uptime", "Bot uptime"),
+            ("reload", "Reload cogs"),
+            ("help [n]", "This menu"),
+            ("addtoken", "Add worker token"),
+            ("rmtoken", "Remove token"),
+            ("tlist", "List tokens"),
+            ("checktoken", "Validate token"),
+            ("workers", "Worker status"),
+        ],
+    ),
+    (
         "Utility",
         [
             ("afk", "Set AFK status"),
@@ -13,15 +27,12 @@ PAGES = [
             ("exportdm", "Export a DM"),
             ("exportguild", "Export guild messages"),
             ("fullexport", "Full account dump zip"),
-            ("help", "This menu"),
             ("id", "Copy an ID"),
             ("last", "Last message from user"),
             ("note", "Save a note"),
-            ("ping", "Latency"),
             ("remind", "Set a reminder"),
             ("snipe", "Snipe deleted message"),
             ("editsnipe", "Snipe edited message"),
-            ("uptime", "Bot uptime"),
             ("userinfo", "User info"),
             ("avatar", "User avatar"),
             ("weather", "Weather lookup"),
@@ -49,18 +60,14 @@ PAGES = [
         [
             ("login", "Login email:pass or token"),
             ("tokens", "List managed tokens"),
-            ("addtoken", "Add token"),
-            ("tlist", "Validate tokens.txt"),
             ("setlogin", "Save email/password"),
             ("refresh", "Refresh token via login"),
             ("fullreset", "Full session reset"),
             ("settoken", "Write token to .env"),
             ("sessions", "List sessions"),
-            ("checktoken", "Validate a token"),
             ("bulkcheck", "Bulk validate tokens.txt"),
             ("changepass", "Change password"),
             ("mailrecover", "IMAP auto recovery"),
-            ("workers", "List workers"),
             ("startworkers", "Start tokens.txt workers"),
         ],
     ),
@@ -126,31 +133,6 @@ PAGES = [
             ("runmacro", "Run macro"),
         ],
     ),
-    (
-        "Fun / Extra",
-        [
-            ("hug", "Hug someone"),
-            ("kiss", "Kiss"),
-            ("slap", "Slap"),
-            ("8ball", "Magic 8ball"),
-            ("coinflip", "Coin flip"),
-            ("roll", "Roll dice"),
-            ("choose", "Choose options"),
-            ("rate", "Rate something"),
-            ("ship", "Ship two users"),
-            ("mock", "MoCk TeXt"),
-            ("clap", "clap text"),
-            ("poll", "Create poll"),
-            ("qr", "QR code"),
-            ("calc", "Calculator"),
-            ("btc", "BTC price"),
-            ("eth", "ETH price"),
-            ("translate", "Translate text"),
-            ("urban", "Urban define"),
-            ("silent", "Stealth silent mode"),
-            ("selfpurge", "Self purge"),
-        ],
-    ),
 ]
 
 
@@ -160,19 +142,25 @@ def render_page(page: int) -> str:
     title, rows = PAGES[page - 1]
     e = "\x1b"
     lines = [
-        f"> ```ansi",
-        f"> {e}[33m{title}{e}[0m",
-        f">",
+        f"```ansi",
+        f"{e}[1;35m╔══════════════════════════════════════╗{e}[0m",
+        f"{e}[1;35m║{e}[0m          {e}[1;36mOreoSB{e}[0m  —  help            {e}[1;35m ║{e}[0m",
+        f"{e}[1;35m╚══════════════════════════════════════╝{e}[0m",
+        f"```",
+        f"```ansi",
+        f"{e}[33m{title}{e}[0m",
+        f"```",
+        f"```ansi",
     ]
     for cmd, desc in rows:
-        lines.append(f"> {e}[0;37m{cmd:<12} {e}[30m| {e}[0;34m{desc}{e}[0m")
+        lines.append(f"{e}[0;37m{cmd:<15} {e}[30m| {e}[0;34m{desc}{e}[0m")
     nxt = page + 1 if page < total else 1
     lines += [
-        f"> ```",
-        f"> ```ansi",
-        f"> {e}[0;37mPage  {e}[30m| {e}[0;34m{page}/{total}{e}[0m",
-        f"> ```",
-        f"> `.help {nxt}` next",
+        f"```",
+        f"```ansi",
+        f"{e}[0;37mPage  {e}[30m| {e}[0;34m{page}/{total}{e}[0m",
+        f"{e}[0;37mnext  {e}[30m| {e}[0;34m.help {nxt}{e}[0m",
+        f"```",
     ]
     return "\n".join(lines)
 
