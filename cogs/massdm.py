@@ -3,6 +3,7 @@ import asyncio
 import random
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 class MassDM(commands.Cog):
     def __init__(self, bot):
@@ -10,6 +11,7 @@ class MassDM(commands.Cog):
         self.running = False
 
     @commands.command(name="massdm")
+    @owner_check()
     async def massdm(self, ctx, guild_id: int, *, message: str):
         await ctx.message.delete()
         guild = self.bot.get_guild(guild_id) or await self.bot.fetch_guild(guild_id)
@@ -34,11 +36,13 @@ class MassDM(commands.Cog):
         self.running = False
 
     @commands.command(name="stopdm")
+    @owner_check()
     async def stopdm(self, ctx):
         self.running = False
         await ctx.message.delete()
 
     @commands.command(name="dmfriends")
+    @owner_check()
     async def dmfriends(self, ctx, *, message: str):
         await ctx.message.delete()
         self.running = True

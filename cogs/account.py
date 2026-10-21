@@ -5,6 +5,7 @@ import random
 import aiohttp
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 API = "https://discord.com/api/v10"
 
@@ -16,6 +17,7 @@ class AccountTools(commands.Cog):
         return {"Authorization": self.bot.http.token, "Content-Type": "application/json"}
 
     @commands.command(name="setbio")
+    @owner_check()
     async def setbio(self, ctx, *, bio: str):
         await ctx.message.delete()
         async with aiohttp.ClientSession() as s:
@@ -23,6 +25,7 @@ class AccountTools(commands.Cog):
                 await ctx.send(f"bio {r.status}", delete_after=3)
 
     @commands.command(name="setpfp")
+    @owner_check()
     async def setpfp(self, ctx, url: str = None):
         await ctx.message.delete()
         if not url and ctx.message.attachments:
@@ -38,6 +41,7 @@ class AccountTools(commands.Cog):
                 await ctx.send(f"avatar {r2.status}", delete_after=3)
 
     @commands.command(name="leaveall")
+    @owner_check()
     async def leaveall(self, ctx, delay: float = 0.6):
         await ctx.message.delete()
         guilds = list(self.bot.guilds)
@@ -50,6 +54,7 @@ class AccountTools(commands.Cog):
         await ctx.send(f"left {len(guilds)}", delete_after=5)
 
     @commands.command(name="hypesquad")
+    @owner_check()
     async def hypesquad(self, ctx, house: int = 1):
         await ctx.message.delete()
         async with aiohttp.ClientSession() as s:
@@ -58,6 +63,7 @@ class AccountTools(commands.Cog):
                 await ctx.send(f"hype {r.status}", delete_after=3)
 
     @commands.command(name="friendspam")
+    @owner_check()
     async def friendspam(self, ctx, username: str, count: int = 5):
         await ctx.message.delete()
         async with aiohttp.ClientSession() as s:

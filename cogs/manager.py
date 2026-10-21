@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 API = "https://discord.com/api/v10"
 
@@ -38,6 +39,7 @@ class Manager(commands.Cog):
                 return r.status
 
     @commands.command(name="tlist")
+    @owner_check()
     async def tlist(self, ctx):
         await ctx.message.delete()
         toks = self._load_tokens()
@@ -57,6 +59,7 @@ class Manager(commands.Cog):
         await ctx.send("**tokens**\n" + "\n".join(lines), delete_after=25)
 
     @commands.command(name="setallpfp")
+    @owner_check()
     async def setallpfp(self, ctx, url: str):
         await ctx.message.delete()
         toks = self._load_tokens()
@@ -76,6 +79,7 @@ class Manager(commands.Cog):
         await ctx.send(f"setallpfp {ok}/{len(toks)}", delete_after=6)
 
     @commands.command(name="setallbio")
+    @owner_check()
     async def setallbio(self, ctx, *, bio: str):
         await ctx.message.delete()
         toks = self._load_tokens()
@@ -88,6 +92,7 @@ class Manager(commands.Cog):
         await ctx.send(f"setallbio {ok}/{len(toks)}", delete_after=6)
 
     @commands.command(name="setallstatus")
+    @owner_check()
     async def setallstatus(self, ctx, status: str = "online"):
         await ctx.message.delete()
         map_ = {"online": "online", "dnd": "dnd", "idle": "idle", "invisible": "invisible"}
@@ -103,6 +108,7 @@ class Manager(commands.Cog):
         await ctx.send(f"setallstatus {ok}/{len(toks)}", delete_after=5)
 
     @commands.command(name="setallgame")
+    @owner_check()
     async def setallgame(self, ctx, *, game: str):
         await ctx.message.delete()
         toks = self._load_tokens()
@@ -117,6 +123,7 @@ class Manager(commands.Cog):
         await ctx.send(f"setallgame {ok}/{len(toks)}", delete_after=5)
 
     @commands.command(name="leavealltokens")
+    @owner_check()
     async def leavealltokens(self, ctx, guild_id: int):
         await ctx.message.delete()
         toks = self._load_tokens()
@@ -130,6 +137,7 @@ class Manager(commands.Cog):
         await ctx.send(f"leavealltokens {ok}/{len(toks)}", delete_after=5)
 
     @commands.command(name="joinaltokens")
+    @owner_check()
     async def joinaltokens(self, ctx, code: str):
         await ctx.message.delete()
         code = code.replace("https://discord.gg/", "").replace("discord.gg/", "").strip()

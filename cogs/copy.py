@@ -1,12 +1,14 @@
 import aiohttp
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 class Copy(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="copyuser")
+    @owner_check()
     async def copyuser(self, ctx, user: discord.User):
         await ctx.message.delete()
         # pfp
@@ -24,6 +26,7 @@ class Copy(commands.Cog):
         await ctx.send(f"copied pfp from {user}", delete_after=5)
 
     @commands.command(name="copystatus")
+    @owner_check()
     async def copystatus(self, ctx, member: discord.Member):
         await ctx.message.delete()
         if not member.activities:

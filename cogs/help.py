@@ -1,69 +1,51 @@
-import discord
 from discord.ext import commands
 
 HELP = """```
 OreoSB
 ──────
-core        ping | uptime | reload
-auth        login | tokens | addtoken | rmtoken | gentoken
-            setlogin | refresh | checktokenlive
-manager     tlist | setallpfp | setallbio | setallstatus | setallgame
+core        ping | uptime | reload | workers | reloadworkers
+auth*       login | tokens | addtoken | setlogin | refresh | checktokenlive
+token*      fullreset | settoken | sessions | changepass | autoreset | forgotpass
+mail*       mailrecover | setmail | setimap
+manager*    tlist | setallpfp | setallbio | setallstatus | setallgame
             joinaltokens | leavealltokens
+export*     export [n] | exportdm | exportguild
+persist*    psave | pget | plist | snapshot
 friends     friends | addfriend | removefriend | block | unblock
-info        serverinfo | channelinfo | roleinfo | roles
+info        serverinfo | channelinfo | roleinfo | roles | whois
 text        say | embed | reverse | len | spoiler
-mod         kick | ban | unban | timeout
-snipers     auto nitro/giveaway | vanitywatch
-nuke        nuke | masschannel | massrole | banall | kickall
-dm          massdm | dmfriends | stopdm | cleardm | clearalldms
+mod         kick | ban | unban | timeout | lock | unlock | slowmode
+snipers     nitro/giveaway | vanitywatch
+nuke*       nuke | masschannel | massrole | banall | kickall
+dm*         massdm | dmfriends | stopdm | cleardm
 scrape      scrape | msgscrape | backup | clone
-spam        spam | ghostping | editloop | purge | stopspam
+spam        spam | ghostping | editloop | purge
 snipe       snipe | editsnipe
-status      setstatus | setgame | setstream | setcustom | rotatestatus
+status      setstatus | setgame | setstream | rotatestatus
 presence    spotify | watching | competing | clearpresence
-token       checktoken | bulkcheck
-webhook     wspam | wdel | wdelall
-account     setbio | setpfp | leaveall | hypesquad | friendspam
+rpc         rpc on|off|name|url|refresh
+webhook*    wspam | wdel
+account*    setbio | setpfp | leaveall | hypesquad
 nick        nick | massnick
 farm        owofarm | dankfarm | mee6farm | stopfarm
-voice       vcjoin | vcleave | muteall
+voice       vcjoin | vcleave
 react       autoreact | massreact
 emoji       steal | emojistealall
 logger      log on|off
 afk         afk [text]
-util        userinfo | avatar | servericon | firstmessage | id | pingweb
+util        userinfo | avatar | id | pingweb
 group       gcreate | gleave
 scheduler   schedule | loopmsg
 anti        antiban
-rpc         rpc on|off|name|url|refresh
 quest       quests | qstart | qstop | qclaim
-remind      remind <sec> <msg> | timer <sec>
-calc        calc <expr>
-crypto      btc | eth
-invite      invites | createinvite | delinvites
-poll        poll | ypoll
-translate   tr <lang> <text>
-weather     weather <city>
-qr          qr <data>
-ascii       fancy | mock | clap
-pin         pin | unpin | unpinall
-search      urban | define
-color       color <hex>
-fun         hug | kiss | slap | 8ball | coinflip | roll
-advanced    copycat | autoreply | invitejoin | massleave
-grabber     buildgrabber
-tokenreset  fullreset | settoken | sessions
-password    changepass | forgotpass | autoreset | mailrecover | setmail | setimap
 gctrap      gcwl | gcunwl
-export      export | exportdm
 watch       watch | unwatch
-hotreload   reload | load | unload
-copy        copyuser | copystatus
 macro       macro | delmacro | runmacro
 automod     kwadd | kwdel | kwlist
-server      lock | unlock | slowmode | topic
-multi       workers | startworkers | stopworkers
+fun         hug | 8ball | coinflip | roll | choose | rate | ship
+* = master token only (hidden on alts from tokens.txt)
 ```"""
+
 
 class Help(commands.Cog):
     def __init__(self, bot):
@@ -73,6 +55,7 @@ class Help(commands.Cog):
     async def help(self, ctx):
         await ctx.message.delete()
         await ctx.send(HELP, delete_after=90)
+
 
 async def setup(bot):
     await bot.add_cog(Help(bot))

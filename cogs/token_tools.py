@@ -3,6 +3,7 @@ import asyncio
 import aiohttp
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 API = "https://discord.com/api/v10"
 
@@ -27,6 +28,7 @@ class TokenTools(commands.Cog):
         self.bot = bot
 
     @commands.command(name="checktoken")
+    @owner_check()
     async def checktoken(self, ctx, token: str):
         await ctx.message.delete()
         res = await check_token(token)
@@ -40,6 +42,7 @@ class TokenTools(commands.Cog):
         await ctx.send(out, delete_after=12)
 
     @commands.command(name="bulkcheck")
+    @owner_check()
     async def bulkcheck(self, ctx):
         await ctx.message.delete()
         try:

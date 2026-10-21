@@ -1,6 +1,7 @@
 import aiohttp
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 from io import BytesIO
 
 class QR(commands.Cog):
@@ -8,6 +9,7 @@ class QR(commands.Cog):
         self.bot = bot
 
     @commands.command(name="qr")
+    @owner_check()
     async def qr(self, ctx, *, data: str):
         await ctx.message.delete()
         url = f"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={data}"

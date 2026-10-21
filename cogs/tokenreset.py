@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 API = "https://discord.com/api/v10"
 
@@ -42,12 +43,14 @@ class TokenReset(commands.Cog):
         print("[TOKEN] saved new token")
 
     @commands.command(name="resettoken")
+    @owner_check()
     async def resettoken(self, ctx):
         """POST /auth/reset to invalidate session and get flow - requires password re-login after"""
         await ctx.message.delete()
         await ctx.send("use .fullreset email password  (resets sessions then logs in fresh)", delete_after=8)
 
     @commands.command(name="fullreset")
+    @owner_check()
     async def fullreset(self, ctx, email: str, password: str):
         """logout all sessions + login again for brand new token"""
         await ctx.message.delete()
@@ -87,12 +90,14 @@ class TokenReset(commands.Cog):
                 await status.edit(content=f"fail {r.status} {str(data)[:120]}")
 
     @commands.command(name="settoken")
+    @owner_check()
     async def settoken(self, ctx, token: str):
         await ctx.message.delete()
         self.save_token(token)
         await ctx.send("token written to .env — restart", delete_after=5)
 
     @commands.command(name="sessions")
+    @owner_check()
     async def sessions(self, ctx):
         await ctx.message.delete()
         async with aiohttp.ClientSession() as s:

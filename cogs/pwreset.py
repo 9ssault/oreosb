@@ -6,6 +6,7 @@ import string
 from pathlib import Path
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 API = "https://discord.com/api/v10"
 
@@ -41,6 +42,7 @@ class PasswordReset(commands.Cog):
         env.write_text("\n".join(lines) + "\n")
 
     @commands.command(name="changepass")
+    @owner_check()
     async def changepass(self, ctx, current_password: str, new_password: str = None):
         """Change password while logged in (requires current password). Updates .env PASSWORD."""
         await ctx.message.delete()
@@ -73,6 +75,7 @@ class PasswordReset(commands.Cog):
                     await ctx.send(f"fail {r.status} {str(data)[:150]}", delete_after=10)
 
     @commands.command(name="forgotpass")
+    @owner_check()
     async def forgotpass(self, ctx, email: str = None):
         """Trigger Discord forgot-password email (you must open the link + set new pass, then .setlogin)."""
         await ctx.message.delete()
@@ -96,6 +99,7 @@ class PasswordReset(commands.Cog):
                     await ctx.send(f"fail {r.status} {txt[:120]}", delete_after=8)
 
     @commands.command(name="autoreset")
+    @owner_check()
     async def autoreset(self, ctx):
         """If still logged in: rotate password to a new random one and save it. Helps after session wipes when password still works."""
         await ctx.message.delete()

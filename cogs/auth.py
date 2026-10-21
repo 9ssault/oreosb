@@ -4,6 +4,7 @@ import json
 import os
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 from colorama import Fore
 
 API = "https://discord.com/api/v10"
@@ -19,6 +20,7 @@ class Auth(commands.Cog):
         return self.session
 
     @commands.command(name="login")
+    @owner_check()
     async def login(self, ctx, method: str = None, *, credentials: str = None):
         """login email:pass  OR  login token <token>"""
         await ctx.message.delete()
@@ -99,6 +101,7 @@ class Auth(commands.Cog):
         return None
 
     @commands.command(name="tokens")
+    @owner_check()
     async def tokens(self, ctx):
         """list managed tokens status"""
         await ctx.message.delete()
@@ -124,6 +127,7 @@ class Auth(commands.Cog):
         await ctx.send(f"{summary}\n{body}", delete_after=20)
 
     @commands.command(name="addtoken")
+    @owner_check()
     async def addtoken(self, ctx, token: str):
         await ctx.message.delete()
         info = await self._validate(token)
@@ -135,6 +139,7 @@ class Auth(commands.Cog):
         await ctx.send(f"added {info['username']}", delete_after=4)
 
     @commands.command(name="rmtoken")
+    @owner_check()
     async def rmtoken(self, ctx, partial: str):
         await ctx.message.delete()
         try:
@@ -148,6 +153,7 @@ class Auth(commands.Cog):
         await ctx.send(f"removed matches — left {len(new)}", delete_after=4)
 
     @commands.command(name="gentoken")
+    @owner_check()
     async def gentoken(self, ctx):
         """generate realistic-looking fake token (for testing patterns)"""
         await ctx.message.delete()

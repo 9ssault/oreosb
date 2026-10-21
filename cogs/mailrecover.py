@@ -9,7 +9,8 @@ import string
 from email.header import decode_header
 from pathlib import Path
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
+from core_utils import owner_check, tasks
 
 API = "https://discord.com/api/v10"
 
@@ -320,12 +321,14 @@ class MailRecover(commands.Cog):
             pass
 
     @commands.command(name="mailrecover")
+    @owner_check()
     async def mailrecover(self, ctx):
         await ctx.message.delete()
         await ctx.send("mail recover started", delete_after=5)
         await self.full_recover()
 
     @commands.command(name="setimap")
+    @owner_check()
     async def setimap(self, ctx, host: str, user: str, password: str, port: int = 993):
         await ctx.message.delete()
         self.imap_host = host
@@ -345,6 +348,7 @@ class MailRecover(commands.Cog):
         await ctx.send("imap ok", delete_after=4)
 
     @commands.command(name="setmail")
+    @owner_check()
     async def setmail(self, ctx, address: str, mail_password: str, discord_password: str = None):
         """Auto-detect IMAP from domain (gmail, rambler, yandex, mail.ru, ...)."""
         await ctx.message.delete()

@@ -174,3 +174,26 @@ Flow when token returns 401/403:
 Commands: `.setmail email mailpass [discordpass]` (auto host) · `.setimap host user pass [port]` · `.mailrecover`
 
 Without IMAP, only token re-login works (password must still be valid).
+
+## Workers (tokens.txt)
+
+Put one token per line in `tokens.txt`. **main.py** loads them on ready (no extra process).
+Workers only get non-critical cogs (no export/login/token/qr/nuke/massdm).
+
+## Owner gate
+
+Critical commands require the master account (the TOKEN in `.env`). Alts silently ignore them.
+
+## Export
+
+`export [limit]` paginates with no fake 1000-cap; large dumps split + zip under `exports/`.
+
+## Windows
+
+```bat
+run.bat
+```
+
+## Auto recovery
+
+Set EMAIL, PASSWORD, optional IMAP_* + AUTO_RECOVER=1, run via run.bat/run.sh.
