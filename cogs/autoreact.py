@@ -75,7 +75,6 @@ class AutoReact(commands.Cog):
                 pass
         await ctx.send(f"reacted {ok}/{len(emojis)}", delete_after=4)
 
-    @commands.command(name="r")
     async def r(self, ctx, emoji: str = None):
         await ctx.message.delete()
         self.bot_emoji = emoji
