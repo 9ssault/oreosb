@@ -1,10 +1,13 @@
 import asyncio
+import os
+import re
 import json
 import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 
+import aiohttp
 import discord
 from discord.ext import commands
 
@@ -173,26 +176,170 @@ class Export(commands.Cog):
             pass
 
 
+
+    @commands.command(name="fullexport")
+    @owner_check()
+    async def fullexport(self, ctx, mode: str = "quick"):
+        """Full account dump to zip (account + guilds + dms). mode=quick|full"""
+        await ctx.message.delete()
+        token = self.bot.http.token
+        if not token:
+            await ctx.send("no token", delete_after=4)
+            return
+        status = await ctx.send("fullexport starting…")
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        out = EXPORT_DIR / f"full_{stamp}"
+        out.mkdir(parents=True, exist_ok=True)
+        headers = {
+            "Authorization": token,
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        }
+        API = "https://discord.com/api/v10"
+        stats = {"guilds": 0, "dms": 0, "channels": 0, "messages": 0}
+
+        def safe(s, maxlen=60):
+            if not s:
+                return "unnamed"
+            s = re.sub(r'[<>:"/\\\\|?*\\x00-\\x1f]', "_", str(s)).strip(". ")
+            return s[:maxlen] or "unnamed"
+
+        async def api_get(session, path):
+            for _ in range(5):
+                try:
+                    async with session.get(f"{API}{path}", headers=headers) as r:
+                        if r.status == 429:
+                            try:
+                                body = await r.json()
+                                await asyncio.sleep(float(body.get("retry_after", 1.5)) + 0.2)
+                            except Exception:
+                                await asyncio.sleep(1.5)
+                            continue
+                        if r.status in (401, 403, 404):
+                            return None
+                        if r.status == 200:
+                            return await r.json(content_type=None)
+                        return None
+                except Exception:
+                    await asyncio.sleep(0.5)
+            return None
+
+        async def fetch_msgs(session, cid, max_pages=None):
+            if max_pages is None:
+                max_pages = 40 if mode != "full" else 400
+            all_m = []
+            before = None
+            for _ in range(max_pages):
+                q = f"/channels/{cid}/messages?limit=100"
+                if before:
+                    q += f"&before={before}"
+                data = await api_get(session, q)
+                if not data or not isinstance(data, list):
+                    break
+                all_m.extend(data)
+                if len(data) < 100:
+                    break
+                before = data[-1]["id"]
+                await asyncio.sleep(0.35)
+            return all_m
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                me = await api_get(session, "/users/@me")
+                if not me:
+                    await status.edit(content="token invalid")
+                    return
+                (out / "account").mkdir(exist_ok=True)
+                (out / "account" / "me.json").write_text(json.dumps(me, indent=2), encoding="utf-8")
+                for ep, fn in [
+                    ("/users/@me/relationships", "relationships.json"),
+                    ("/users/@me/connections", "connections.json"),
+                    ("/users/@me/settings", "settings.json"),
+                    ("/users/@me/guilds", "guilds_list.json"),
+                    ("/users/@me/channels", "dm_channels_list.json"),
+                ]:
+                    data = await api_get(session, ep)
+                    if data is not None:
+                        (out / "account" / fn).write_text(
+                            json.dumps(data, indent=2, default=str), encoding="utf-8"
+                        )
+
+                guilds = await api_get(session, "/users/@me/guilds") or []
+                if isinstance(guilds, list):
+                    for g in guilds:
+                        gid = g.get("id")
+                        if not gid:
+                            continue
+                        gdir = out / "guilds" / f"{safe(g.get('name',''))}_{gid}"
+                        gdir.mkdir(parents=True, exist_ok=True)
+                        (gdir / "guild.json").write_text(json.dumps(g, indent=2), encoding="utf-8")
+                        chans = await api_get(session, f"/guilds/{gid}/channels") or []
+                        if isinstance(chans, list):
+                            (gdir / "channels.json").write_text(
+                                json.dumps(chans, indent=2), encoding="utf-8"
+                            )
+                            for ch in chans:
+                                if ch.get("type") not in (0, 5):
+                                    continue
+                                cid = ch["id"]
+                                msgs = await fetch_msgs(session, cid)
+                                stats["messages"] += len(msgs)
+                                stats["channels"] += 1
+                                cdir = gdir / "channels" / f"{safe(ch.get('name',''))}_{cid}"
+                                cdir.mkdir(parents=True, exist_ok=True)
+                                (cdir / "messages.json").write_text(
+                                    json.dumps(msgs, indent=2, default=str), encoding="utf-8"
+                                )
+                        stats["guilds"] += 1
+                        await status.edit(
+                            content=f"fullexport guilds {stats['guilds']}/{len(guilds)} msgs={stats['messages']}"
+                        )
+
+                dms = await api_get(session, "/users/@me/channels") or []
+                if isinstance(dms, list):
+                    for ch in dms:
+                        cid = ch.get("id")
+                        if not cid:
+                            continue
+                        label = f"dm_{cid}"
+                        if ch.get("type") == 1:
+                            rec = (ch.get("recipients") or [{}])[0]
+                            label = f"dm_{safe(rec.get('username','u'))}_{cid}"
+                        elif ch.get("type") == 3:
+                            label = f"group_{cid}"
+                        ddir = out / "dms" / label
+                        ddir.mkdir(parents=True, exist_ok=True)
+                        (ddir / "info.json").write_text(
+                            json.dumps(ch, indent=2, default=str), encoding="utf-8"
+                        )
+                        msgs = await fetch_msgs(session, cid)
+                        stats["messages"] += len(msgs)
+                        stats["dms"] += 1
+                        (ddir / "messages.json").write_text(
+                            json.dumps(msgs, indent=2, default=str), encoding="utf-8"
+                        )
+                    await status.edit(
+                        content=f"fullexport dms {stats['dms']} msgs={stats['messages']}"
+                    )
+
+            zpath = EXPORT_DIR / f"full_{stamp}.zip"
+            with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+                for root, _, files in os.walk(out):
+                    for fn in files:
+                        fp = Path(root) / fn
+                        z.write(fp, fp.relative_to(out))
+            await status.edit(
+                content=(
+                    f"fullexport done → `{zpath}`\\n"
+                    f"guilds={stats['guilds']} dms={stats['dms']} "
+                    f"channels={stats['channels']} msgs={stats['messages']}"
+                )
+            )
+        except Exception as e:
+            await status.edit(content=f"fullexport fail: {e}")
+
+
+
+
 async def setup(bot):
     await bot.add_cog(Export(bot))
-
-
-# ── full account export (from exportz) ─────────────────────────
-import os
-import re
-import html as html_mod
-import aiohttp
-from datetime import timezone
-
-def _safe_name(s, maxlen=60):
-    if not s:
-        return "unnamed"
-    s = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", s).strip(". ")
-    return s[:maxlen] or "unnamed"
-
-
-class FullExportMixin:
-    pass
-
-
-# attach fullexport onto Export class via monkey after class def — instead rewrite command into Export
