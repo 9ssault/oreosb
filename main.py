@@ -49,6 +49,7 @@ class OreoSB(commands.Bot):
         self.role = role
         self.auth_token = token
         self.workers = {}
+        self.failed_workers = set()
         self._token_file_mtime = 0.0
 
     async def setup_hook(self):
@@ -112,9 +113,10 @@ class OreoSB(commands.Bot):
 
         async def runner():
             try:
-                await wbot.start(token, log_handler=None)
+                await wbot.start(token)
             except Exception as e:
                 print(f"{Fore.RED}[worker] {key} died: {e}")
+                self.failed_workers.add(key)
             finally:
                 self.workers.pop(key, None)
 
@@ -133,7 +135,7 @@ class OreoSB(commands.Bot):
                         for t in load_tokens():
                             if t == self.auth_token:
                                 continue
-                            if t[:20] not in self.workers:
+                            if t[:20] not in self.workers and t[:20] not in self.failed_workers:
                                 await self._start_worker(t)
                                 await asyncio.sleep(1.0)
             except Exception as e:
@@ -198,4 +200,4 @@ if __name__ == "__main__":
     if not TOKEN:
         print(f"{Fore.RED}[!] TOKEN missing — set in .env")
         raise SystemExit(1)
-    bot.run(TOKEN, log_handler=None)
+    bot.run(TOKEN)
