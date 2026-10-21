@@ -6,10 +6,11 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-RPC_APP = os.getenv("RPC_APP_ID", "1554236986515132416")
+# fixed application for all RPC assets
+RPC_APP = "1554236986515132416"
 RPC_IMG = os.getenv(
     "RPC_IMG",
-    "https://cdn.discordapp.com/app-assets/1554236986515132416/1554565446403883028.png",
+    f"https://cdn.discordapp.com/app-assets/{RPC_APP}/1554565446403883028.png",
 )
 RPC_STREAM = os.getenv("RPC_STREAM_URL", "https://twitch.tv/ikcold")
 
@@ -26,51 +27,114 @@ class RPC(commands.Cog):
         self.stream_url = RPC_STREAM
         self.app_id = RPC_APP
         self.img_url = RPC_IMG
-        self.asset = None          # resolved mp: path or manual key
-        self.asset_key = None      # manual key from .setkey (uploaded asset name/id)
+        self.asset = None
+        self.asset_key = None
+        self._asset_cache = {}  # name/id -> resolved large_image value
         self._task = None
         self.mode = "stream" if self.enabled else "off"
         self.bland = False
 
-    async def _resolve_asset(self):
-        # manual key always wins
-        if self.asset_key:
-            key = self.asset_key.strip()
-            if key.startswith("mp:"):
-                self.asset = key
-            else:
-                self.asset = key  # raw uploaded asset key / name
-            return self.asset
-        if self.bland:
-            self.asset = None
-            return None
-        if self.asset and self.asset != "fatdog":
-            return self.asset
+    def _headers(self):
         token = getattr(self.bot.http, "token", "")
-        headers = {
+        return {
             "Authorization": token,
             "Content-Type": "application/json",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         }
+
+    async def _fetch_app_assets(self):
+        """List rich presence assets on app 1554236986515132416."""
+        url = f"https://discord.com/api/v9/oauth2/applications/{self.app_id}/assets"
         try:
             async with aiohttp.ClientSession() as s:
-                async with s.post(
-                    f"https://discord.com/api/v9/applications/{self.app_id}/external-assets",
-                    headers=headers,
-                    json={"urls": [self.img_url]},
-                    timeout=aiohttp.ClientTimeout(total=12),
-                ) as r:
+                async with s.get(url, headers=self._headers(), timeout=aiohttp.ClientTimeout(total=12)) as r:
                     if r.status == 200:
                         data = await r.json(content_type=None)
-                        if isinstance(data, list) and data:
-                            path = data[0].get("external_asset_path")
-                            if path:
-                                self.asset = path if str(path).startswith("mp:") else f"mp:{path}"
-                                return self.asset
+                        if isinstance(data, list):
+                            return data
         except Exception:
             pass
-        self.asset = None
-        return None
+        return []
+
+    async def _convert_key(self, key: str) -> str:
+        """
+        Turn any user input into the format Discord expects for large_image:
+        - already mp:... → keep
+        - numeric snowflake / asset id → use as-is (Discord accepts id under application_id)
+        - asset name → look up id from app assets list, use id
+        - http(s) url → external-assets → mp: path
+        """
+        key = (key or "").strip()
+        if not key:
+            return None
+        if key in self._asset_cache:
+            return self._asset_cache[key]
+
+        # already correct media proxy path
+        if key.startswith("mp:"):
+            self._asset_cache[key] = key
+            return key
+
+        # external image url → resolve via external-assets
+        if key.startswith("http://") or key.startswith("https://"):
+            try:
+                async with aiohttp.ClientSession() as s:
+                    async with s.post(
+                        f"https://discord.com/api/v9/applications/{self.app_id}/external-assets",
+                        headers=self._headers(),
+                        json={"urls": [key]},
+                        timeout=aiohttp.ClientTimeout(total=12),
+                    ) as r:
+                        if r.status == 200:
+                            data = await r.json(content_type=None)
+                            if isinstance(data, list) and data:
+                                path = data[0].get("external_asset_path")
+                                if path:
+                                    resolved = path if str(path).startswith("mp:") else f"mp:{path}"
+                                    self._asset_cache[key] = resolved
+                                    return resolved
+            except Exception:
+                pass
+            return None
+
+        # pure digits → treat as asset id under this application
+        if key.isdigit():
+            self._asset_cache[key] = key
+            return key
+
+        # name → fetch app assets and match by name (case-insensitive)
+        assets = await self._fetch_app_assets()
+        lower = key.lower()
+        for a in assets:
+            name = (a.get("name") or "").lower()
+            aid = str(a.get("id") or "")
+            if name == lower or aid == key:
+                resolved = aid
+                self._asset_cache[key] = resolved
+                self._asset_cache[aid] = resolved
+                return resolved
+
+        # fallback: use the name string itself (Discord sometimes accepts it with application_id)
+        self._asset_cache[key] = key
+        return key
+
+    async def _resolve_asset(self):
+        if self.asset_key:
+            resolved = await self._convert_key(self.asset_key)
+            self.asset = resolved
+            return self.asset
+
+        if self.bland:
+            self.asset = None
+            return None
+
+        if self.asset and self.asset != "fatdog":
+            return self.asset
+
+        # default image url from this app
+        resolved = await self._convert_key(self.img_url)
+        self.asset = resolved
+        return self.asset
 
     def _build_activity(self):
         title = (self.name or " ").strip() or " "
@@ -87,7 +151,6 @@ class RPC(commands.Cog):
         }
         t = type_map.get(self.mode, 0)
 
-        # bland = title only, unless a manual asset key is set
         if self.bland and not self.asset_key:
             act = {"name": title, "type": t}
             if t == 1:
@@ -96,7 +159,6 @@ class RPC(commands.Cog):
                 act = {"name": "Custom Status", "type": 4, "state": title}
             return act
 
-        # rich / with asset key
         if t == 4:
             act = {"name": "Custom Status", "type": 4, "state": title}
         else:
@@ -162,7 +224,6 @@ class RPC(commands.Cog):
         self.bland = True
         self.mode = mode
         self.name = title
-        # keep asset_key if user set one — still one card, just with image
         if not self.asset_key:
             self.asset = None
         return await self.push(False)
@@ -173,8 +234,8 @@ class RPC(commands.Cog):
         if mode is None:
             key = self.asset_key or "-"
             await ctx.send(
-                f"rpc · {'on' if self.enabled else 'off'} · {self.mode} · {self.name!r} · key {key}",
-                delete_after=6,
+                f"rpc · {'on' if self.enabled else 'off'} · {self.mode} · {self.name!r} · key {key} · app {self.app_id}",
+                delete_after=8,
             )
             return
         m = mode.lower()
@@ -199,6 +260,7 @@ class RPC(commands.Cog):
             await self.push(False)
             await ctx.send("ok", delete_after=3)
         elif m == "refresh":
+            self._asset_cache.clear()
             ok = await self.push(True)
             await ctx.send("ok" if ok else "fail", delete_after=3)
         else:
@@ -207,9 +269,9 @@ class RPC(commands.Cog):
     @commands.command(name="setkey", aliases=["setasset", "rpcasset"])
     async def setkey(self, ctx, *, key: str = None):
         """
-        .setkey <uploaded asset name/id>
-        Sets large_image to that asset key on the current RPC card.
-        .setkey clear  → remove manual key
+        .setkey <name|id|url|mp:...>
+        Pulls from app 1554236986515132416 and auto-converts to the format Discord wants.
+        .setkey clear → remove
         """
         await ctx.message.delete()
         if not key or key.lower() in ("clear", "off", "none", "null"):
@@ -219,14 +281,29 @@ class RPC(commands.Cog):
             await ctx.send("key cleared", delete_after=3)
             return
         key = key.strip()
-        # accept raw name, id, or mp:path
         self.asset_key = key
-        self.bland = False  # show the image
+        self.bland = False
         self.enabled = True
         if self.mode == "off":
             self.mode = "stream"
+        resolved = await self._convert_key(key)
+        self.asset = resolved
         ok = await self.push(True)
-        await ctx.send(f"key · {key}" if ok else f"key set · push fail", delete_after=4)
+        shown = resolved or key
+        await ctx.send(f"key · {shown}" if ok else f"key · {shown} · push fail", delete_after=5)
+
+    @commands.command(name="listassets", aliases=["assets"])
+    async def listassets(self, ctx):
+        """List rich presence assets on app 1554236986515132416."""
+        await ctx.message.delete()
+        assets = await self._fetch_app_assets()
+        if not assets:
+            await ctx.send("no assets / failed to fetch", delete_after=5)
+            return
+        lines = []
+        for a in assets[:30]:
+            lines.append(f"`{a.get('id')}` {a.get('name')}")
+        await ctx.send("**app assets**\n" + "\n".join(lines), delete_after=20)
 
     @commands.command(name="setstream")
     async def setstream(self, ctx, *, title: str):
