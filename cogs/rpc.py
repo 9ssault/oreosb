@@ -17,7 +17,12 @@ RPC_STREAM = os.getenv("RPC_STREAM_URL", "https://twitch.tv/ikcold")
 class RPC(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.enabled = os.getenv("RPC_ON", "1").lower() in ("1", "true", "yes")
+        # workers always start with RPC on; master respects env (default on)
+        role = getattr(bot, "role", "master")
+        if role == "worker":
+            self.enabled = True
+        else:
+            self.enabled = os.getenv("RPC_ON", "1").lower() in ("1", "true", "yes")
         self.name = os.getenv("RPC_NAME", " ")
         self.stream_url = RPC_STREAM
         self.app_id = RPC_APP
@@ -60,7 +65,7 @@ class RPC(commands.Cog):
         if self.enabled:
             await self._resolve_asset()
 
-        # 1) try library Streaming (worked on some builds earlier)
+        # 1) try library Streaming
         if self.enabled:
             try:
                 activity = discord.Streaming(name=self.name or " ", url=self.stream_url)
@@ -80,7 +85,7 @@ class RPC(commands.Cog):
             except Exception:
                 pass
 
-        # 2) always also send raw OP 3 like the JS client
+        # 2) raw OP 3
         ws = getattr(self.bot, "ws", None)
         if not ws:
             return False
@@ -140,6 +145,9 @@ class RPC(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         await asyncio.sleep(2)
+        # workers always force on at ready
+        if getattr(self.bot, "role", "master") == "worker":
+            self.enabled = True
         if self.enabled:
             await self.push(True)
         if not self._task or self._task.done():
@@ -148,6 +156,8 @@ class RPC(commands.Cog):
     async def _loop(self):
         while not self.bot.is_closed():
             await asyncio.sleep(180)
+            if getattr(self.bot, "role", "master") == "worker":
+                self.enabled = True
             if self.enabled:
                 await self.push(False)
 
