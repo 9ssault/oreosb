@@ -151,27 +151,28 @@ PAGES = [
 
 def render_page(page: int) -> str:
     total = len(PAGES)
-    page = max(1, min(page, total))
+    page = max(1, min(int(page), total))
     title, rows = PAGES[page - 1]
-    lines = [
-        ">",
-        ">",
-        f"> *```*ansi",
-        f"> \x1b[33m{title}\x1b[0m",
-        f"> ``````ansi",
-    ]
+    esc = "\x1b"
+    out = []
+    out.append(">")
+    out.append(">")
+    out.append(f"> ```ansi")
+    out.append(f"> {esc}[33m{title}{esc}[0m")
+    out.append(f"> ```")
+    out.append(f"> ```ansi")
     for cmd, desc in rows:
-        lines.append(
-            f"> \x1b[0;37m{cmd:<12} \x1b[30m| \x1b[0;34m{desc}\x1b[0m"
+        out.append(
+            f"> {esc}[0;37m{cmd:<12} {esc}[30m| {esc}[0;34m{desc}{esc}[0m"
         )
-    lines += [
-        f"> ``````ansi",
-        f"> \x1b[0;37mPage  \x1b[30m| \x1b[0;34m{page}/{total}\x1b[0m",
-        f"> *```*",
-        ">",
-        f"> `.help {page + 1 if page < total else 1}` next",
-    ]
-    return "\n".join(lines)
+    out.append(f"> ```")
+    out.append(f"> ```ansi")
+    out.append(f"> {esc}[0;37mPage  {esc}[30m| {esc}[0;34m{page}/{total}{esc}[0m")
+    out.append(f"> ```")
+    out.append(">")
+    nxt = page + 1 if page < total else 1
+    out.append(f"> `.help {nxt}` next")
+    return "\n".join(out)
 
 
 class Help(commands.Cog):
