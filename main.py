@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+logging.basicConfig(level=logging.CRITICAL)
 import os
 import time
 from pathlib import Path
@@ -69,17 +70,23 @@ class OreoSB(commands.Bot):
             name = fname[:-3]
             if self.role == "worker":
                 if name in MASTER_ONLY_COGS or name not in WORKER_COGS:
-                    print(f"{Fore.YELLOW}[-] skip {name}")
+                    if self.role == "master":
+                        print(f"{Fore.YELLOW}[-] skip {name}")
                     skipped += 1
                     continue
             try:
                 await self.load_extension(f"cogs.{name}")
-                print(f"{Fore.GREEN}[+] {name}")
+                if self.role == "master":
+                    print(f"{Fore.GREEN}[+] {name}")
                 loaded += 1
             except Exception as e:
-                print(f"{Fore.RED}[-] skip {name}{Style.RESET_ALL} {Style.DIM}{e}{Style.RESET_ALL}")
+                if self.role == "master":
+                    print(f"{Fore.RED}[-] skip {name}{Style.RESET_ALL} {Style.DIM}{e}{Style.RESET_ALL}")
                 skipped += 1
-        print(f"{Fore.CYAN}[+] {loaded} cogs{Style.RESET_ALL}" + (f"  {Fore.YELLOW}({skipped} skipped)" if skipped else ""))
+        if self.role == "master":
+            print(f"{Fore.CYAN}[+] {loaded} cogs{Style.RESET_ALL}" + (f"  {Fore.YELLOW}({skipped} skipped)" if skipped else ""))
+        else:
+            print(f"{Fore.CYAN}[worker] {loaded} cogs{Style.RESET_ALL}")
 
     async def on_ready(self):
         self.start_time = time.time()
