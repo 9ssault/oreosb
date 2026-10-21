@@ -29,8 +29,6 @@ for _name in ("discord", "discord.http", "discord.gateway", "discord.client"):
     log.disabled = True
 
 from core_utils import load_tokens, save_state, load_state, DATA_DIR
-from cogs.platform import apply_gateway_patch
-apply_gateway_patch()
 
 DATA_DIR.mkdir(exist_ok=True)
 
